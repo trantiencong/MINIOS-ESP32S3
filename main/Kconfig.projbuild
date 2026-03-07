@@ -3,9 +3,10 @@ menu "Xiaozhi Assistant"
 config OTA_URL
     string "Default OTA URL"
     default "https://api.tenclass.net/xiaozhi/ota/"
-    help
-        The application will access this URL to check for new firmwares and server address.
-
+    
+config MINIOS_VERSION
+    string "MiniOS Firmware Version"
+    default "V1"        
 choice
     prompt "Flash Assets"
     default FLASH_DEFAULT_ASSETS if !USE_EMOTE_MESSAGE_STYLE
@@ -463,6 +464,9 @@ choice BOARD_TYPE
         depends on IDF_TARGET_ESP32S3
     config BOARD_TYPE_ZHENGCHEN_1_54TFT_WIFI
         bool "征辰科技1.54(WIFI)"
+        depends on IDF_TARGET_ESP32S3
+    config BOARD_TYPE_MINIOS_1_54TFT_WIFI
+        bool "MiniOS 1.54 TFT WiFi"
         depends on IDF_TARGET_ESP32S3
     config BOARD_TYPE_ZHENGCHEN_1_54TFT_ML307
         bool "征辰科技1.54(ML307)"

@@ -36,6 +36,7 @@ set(SOURCES "audio/audio_codec.cc"
             "settings.cc"
             "device_state_machine.cc"
             "assets.cc"
+            "assets/fonts/nunito_24.c"
             "main.cc"
             )
 
@@ -78,7 +79,8 @@ function(find_component_by_pattern PATTERN COMPONENT_VAR PATH_VAR)
 endfunction()
 
 # Set default BUILTIN_TEXT_FONT and BUILTIN_ICON_FONT
-set(BUILTIN_TEXT_FONT font_puhui_14_1)
+# set(BUILTIN_TEXT_FONT font_puhui_14_1)
+set(BUILTIN_TEXT_FONT nunito_24)
 set(BUILTIN_ICON_FONT font_awesome_14_1)
 
 set(EMOTE_RESOLUTION "320_240")
@@ -634,6 +636,12 @@ elseif(CONFIG_BOARD_TYPE_ZHENGCHEN_1_54TFT_WIFI)
     set(BUILTIN_TEXT_FONT font_puhui_basic_20_4)
     set(BUILTIN_ICON_FONT font_awesome_20_4)
     set(DEFAULT_EMOJI_COLLECTION twemoji_64)
+elseif(CONFIG_BOARD_TYPE_MINIOS_1_54TFT_WIFI)
+    set(BOARD_TYPE "zhengchen-1.54tft-wifi")
+    set(BOARD_NAME "MiniOS")
+    set(BUILTIN_TEXT_FONT font_puhui_basic_20_4)
+    set(BUILTIN_ICON_FONT font_awesome_20_4)
+    set(DEFAULT_EMOJI_COLLECTION twemoji_64)
 elseif(CONFIG_BOARD_TYPE_MINSI_K08_DUAL)
     set(BOARD_TYPE "minsi-k08-dual")
     set(BUILTIN_TEXT_FONT font_puhui_basic_20_4)
@@ -915,6 +923,7 @@ if(NOT BOARD_NAME)
 endif()
 target_compile_definitions(${COMPONENT_LIB}
                     PRIVATE BOARD_TYPE=\"${BOARD_TYPE}\" BOARD_NAME=\"${BOARD_NAME}\"
+                    PRIVATE MINIOS_VERSION=\"${CONFIG_MINIOS_VERSION}\"
                     PRIVATE BUILTIN_TEXT_FONT=${BUILTIN_TEXT_FONT} BUILTIN_ICON_FONT=${BUILTIN_ICON_FONT}
                     )
 
