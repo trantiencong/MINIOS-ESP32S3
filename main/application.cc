@@ -9,7 +9,7 @@
 #include "mcp_server.h"
 #include "assets.h"
 #include "settings.h"
-
+#include <esp_timer.h>
 #include <cstring>
 #include <esp_log.h>
 #include <cJSON.h>
@@ -865,6 +865,7 @@ void Application::HandleStateChangedEvent() {
         case kDeviceStateUnknown:
         case kDeviceStateIdle:
             display->SetStatus(Lang::Strings::STANDBY);
+            UpdateIdleInfo();
             display->ClearChatMessages();  // Clear messages first
             display->SetEmotion("neutral"); // Then set emotion (wechat mode checks child count)
             audio_service_.EnableVoiceProcessing(false);
@@ -924,6 +925,42 @@ void Application::HandleStateChangedEvent() {
             // Do nothing
             break;
     }
+}
+
+bool Application::RefreshWeatherIfNeeded(bool force) {
+    const int64_t now_ms = esp_timer_get_time() / 1000;
+    const int64_t cache_ms = 10LL * 60LL * 1000LL;
+
+    if (!force && weather_info_.valid && (now_ms - weather_info_.fetched_at_ms) < cache_ms) {
+        return true;
+    }
+
+    WeatherInfo fetched;
+    if (!weather_service_.FetchCurrent(fetched)) {
+        return weather_info_.valid;
+    }
+
+    weather_info_ = fetched;
+    return true;
+}
+
+const char* Application::MapWeatherIconCode(const std::string& icon_code) {
+    return "";
+}
+
+void Application::UpdateIdleInfo() {
+    auto display = Board::GetInstance().GetDisplay();
+
+    if (!RefreshWeatherIfNeeded(false)) {
+        display->SetIdleInfo(CONFIG_OPENWEATHER_LOCATION_NAME, "Weather is unavailable", "--");
+        return;
+    }
+
+    display->SetIdleInfo(
+        weather_info_.location.c_str(),
+        weather_info_.description.c_str(),
+        weather_info_.temperature.c_str()
+    );
 }
 
 void Application::Schedule(std::function<void()>&& callback) {

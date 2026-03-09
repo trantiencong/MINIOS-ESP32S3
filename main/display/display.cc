@@ -24,17 +24,23 @@ void Display::SetStatus(const char* status) {
     ESP_LOGW(TAG, "SetStatus: %s", status);
 }
 
-void Display::ShowNotification(const std::string &notification, int duration_ms) {
-    ShowNotification(notification.c_str(), duration_ms);
+void Display::SetIdleInfo(const char* location, const char* weather, const char* temperature) {
+    ESP_LOGW(TAG, "SetIdleInfo: %s | %s | %s",
+        location ? location : "",
+        weather ? weather : "",
+        temperature ? temperature : "");
 }
 
 void Display::ShowNotification(const char* notification, int duration_ms) {
     ESP_LOGW(TAG, "ShowNotification: %s", notification);
 }
 
-void Display::UpdateStatusBar(bool update_all) {
+void Display::ShowNotification(const std::string &notification, int duration_ms) {
+    ShowNotification(notification.c_str(), duration_ms);
 }
 
+void Display::UpdateStatusBar(bool update_all) {
+}
 
 void Display::SetEmotion(const char* emotion) {
     ESP_LOGW(TAG, "SetEmotion: %s", emotion);

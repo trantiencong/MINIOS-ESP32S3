@@ -1,4 +1,4 @@
-menu "Xiaozhi Assistant"
+menu "MiniOS Assistant"
 
 config OTA_URL
     string "Default OTA URL"
@@ -906,5 +906,27 @@ menu "TAIJIPAI_S3_CONFIG"
     help
         启动双声道
 endmenu
+menu "Weather"
 
+config OPENWEATHER_API_KEY
+    string "OpenWeather API key"
+    default ""
+
+config OPENWEATHER_LAT
+    string "OpenWeather latitude"
+    default "13.7820"
+
+config OPENWEATHER_LON
+    string "OpenWeather longitude"
+    default "109.2197"
+
+config OPENWEATHER_LOCATION_NAME
+    string "Weather location name"
+    default "Quy Nhon"
+
+config OPENWEATHER_LANG
+    string "OpenWeather language"
+    default "vi"
+
+endmenu
 endmenu

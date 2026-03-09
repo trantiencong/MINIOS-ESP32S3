@@ -18,6 +18,7 @@ public:
     virtual ~LvglDisplay();
 
     virtual void SetStatus(const char* status);
+    virtual void SetIdleInfo(const char* location, const char* weather, const char* temperature);
     virtual void ShowNotification(const char* notification, int duration_ms = 3000);
     virtual void ShowNotification(const std::string &notification, int duration_ms = 3000);
     virtual void SetPreviewImage(std::unique_ptr<LvglImage> image);

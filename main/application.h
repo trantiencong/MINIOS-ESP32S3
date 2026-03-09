@@ -16,6 +16,7 @@
 #include "audio_service.h"
 #include "device_state.h"
 #include "device_state_machine.h"
+#include "weather_service.h"
 
 // Main event bits
 #define MAIN_EVENT_SCHEDULE             (1 << 0)
@@ -134,6 +135,8 @@ private:
     AecMode aec_mode_ = kAecOff;
     std::string last_error_message_;
     AudioService audio_service_;
+    WeatherService weather_service_;
+    WeatherInfo weather_info_;
     std::unique_ptr<Ota> ota_;
 
     bool has_server_time_ = false;
@@ -153,6 +156,9 @@ private:
     void HandleNetworkDisconnectedEvent();
     void HandleActivationDoneEvent();
     void HandleWakeWordDetectedEvent();
+    void UpdateIdleInfo();
+    const char* MapWeatherIconCode(const std::string& icon_code);
+    bool RefreshWeatherIfNeeded(bool force = false);
     void ContinueOpenAudioChannel(ListeningMode mode);
     void ContinueWakeWordInvoke(const std::string& wake_word);
 

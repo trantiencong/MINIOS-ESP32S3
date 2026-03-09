@@ -55,7 +55,7 @@ LvglDisplay::~LvglDisplay() {
         lv_obj_del(status_label_);
     }
     if (idle_info_label_ != nullptr) {
-    lv_obj_del(idle_info_label_);
+        lv_obj_del(idle_info_label_);
     }
     if (mute_label_ != nullptr) {
         lv_obj_del(mute_label_);
@@ -87,6 +87,23 @@ void LvglDisplay::SetStatus(const char* status) {
     lv_obj_add_flag(notification_label_, LV_OBJ_FLAG_HIDDEN);
 
     last_status_update_time_ = std::chrono::system_clock::now();
+}
+
+void LvglDisplay::SetIdleInfo(const char* location, const char* weather, const char* temperature) {
+    DisplayLockGuard lock(this);
+
+    if (idle_info_label_ == nullptr) {
+        return;
+    }
+
+    const char* safe_location = (location != nullptr) ? location : "";
+    const char* safe_weather = (weather != nullptr) ? weather : "";
+    const char* safe_temperature = (temperature != nullptr) ? temperature : "";
+
+    char idle_text[128];
+    snprintf(idle_text, sizeof(idle_text), "%s\n%s %s", safe_location, safe_weather, safe_temperature);
+
+    lv_label_set_text(idle_info_label_, idle_text);
 }
 
 void LvglDisplay::ShowNotification(const std::string &notification, int duration_ms) {
@@ -133,10 +150,8 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
             lv_label_set_text(mute_label_, "");
         }
     }
-
     // Update time
-    // Update time
-if (app.GetDeviceState() == kDeviceStateIdle) {
+    if (app.GetDeviceState() == kDeviceStateIdle) {
     if (last_status_update_time_ + std::chrono::seconds(10) < std::chrono::system_clock::now()) {
         // Set status to clock "HH:MM"
         time_t now = time(NULL);
