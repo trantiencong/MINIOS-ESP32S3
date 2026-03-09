@@ -31,6 +31,7 @@ protected:
 
     lv_obj_t *network_label_ = nullptr;
     lv_obj_t *status_label_ = nullptr;
+    lv_obj_t *idle_info_label_ = nullptr;
     lv_obj_t *notification_label_ = nullptr;
     lv_obj_t *mute_label_ = nullptr;
     lv_obj_t *battery_label_ = nullptr;

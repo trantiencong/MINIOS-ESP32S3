@@ -903,7 +903,7 @@ void LcdDisplay::SetupUI() {
 
     /* Layer 2: Status bar - for center text labels */
     status_bar_ = lv_obj_create(screen);
-    lv_obj_set_size(status_bar_, LV_HOR_RES, 40);
+    lv_obj_set_size(status_bar_, LV_HOR_RES, 90);
     lv_obj_set_style_radius(status_bar_, 0, 0);
     lv_obj_set_style_bg_opa(status_bar_, LV_OPA_TRANSP, 0);  // Transparent background
     lv_obj_set_style_border_width(status_bar_, 0, 0);
@@ -929,7 +929,16 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_style_text_color(status_label_, lvgl_theme->text_color(), 0);
     lv_label_set_text(status_label_, Lang::Strings::INITIALIZING);
     lv_obj_set_style_text_font(status_label_, &BUILTIN_TEXT_FONT, 0);
-    lv_obj_align(status_label_, LV_ALIGN_CENTER, 0, -8);
+    lv_obj_align(status_label_, LV_ALIGN_CENTER, 0, -18);
+   idle_info_label_ = lv_label_create(status_bar_);
+    lv_obj_set_width(idle_info_label_, LV_HOR_RES * 0.82);
+    lv_label_set_long_mode(idle_info_label_, LV_LABEL_LONG_WRAP);
+    lv_obj_set_style_text_align(idle_info_label_, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_color(idle_info_label_, lvgl_theme->text_color(), 0);
+    lv_obj_set_style_text_font(idle_info_label_, &BUILTIN_TEXT_FONT, 0);
+    lv_label_set_text(idle_info_label_, "Quy Nhơn\nTrời quang 29°C");
+    lv_obj_align(idle_info_label_, LV_ALIGN_CENTER, 0, 22);
+    lv_obj_add_flag(idle_info_label_, LV_OBJ_FLAG_HIDDEN);
 
 #if CONFIG_USE_MULTILINE_CHAT_MESSAGE
     /* Bottom bar - auto height, grows upward with wrapped text */
@@ -1281,11 +1290,15 @@ void LcdDisplay::SetTheme(Theme* theme) {
         }
     }
 #else
-    // Simple UI mode - just update the main chat message
-    if (chat_message_label_ != nullptr) {
+        // Simple UI mode - just update the main chat message
+        if (chat_message_label_ != nullptr) {
         lv_obj_set_style_text_color(chat_message_label_, lvgl_theme->text_color(), 0);
     }
-    
+
+    if (idle_info_label_ != nullptr) {
+        lv_obj_set_style_text_color(idle_info_label_, lvgl_theme->text_color(), 0);
+    }
+
     if (emoji_label_ != nullptr) {
         lv_obj_set_style_text_color(emoji_label_, lvgl_theme->text_color(), 0);
     }

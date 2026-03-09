@@ -4,7 +4,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <font_awesome.h>
-
 #include "lvgl_display.h"
 #include "board.h"
 #include "application.h"
@@ -54,6 +53,9 @@ LvglDisplay::~LvglDisplay() {
     }
     if (status_label_ != nullptr) {
         lv_obj_del(status_label_);
+    }
+    if (idle_info_label_ != nullptr) {
+    lv_obj_del(idle_info_label_);
     }
     if (mute_label_ != nullptr) {
         lv_obj_del(mute_label_);
@@ -133,19 +135,36 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
     }
 
     // Update time
-    if (app.GetDeviceState() == kDeviceStateIdle) {
-        if (last_status_update_time_ + std::chrono::seconds(10) < std::chrono::system_clock::now()) {
-            // Set status to clock "HH:MM"
-            time_t now = time(NULL);
-            struct tm* tm = localtime(&now);
-            // Check if the we have already set the time
-            if (tm->tm_year >= 2025 - 1900) {
-                char time_str[16];
-                strftime(time_str, sizeof(time_str), "%H:%M", tm);
-                SetStatus(time_str);
-            } else {
-                ESP_LOGW(TAG, "System time is not set, tm_year: %d", tm->tm_year);
-            }
+    // Update time
+if (app.GetDeviceState() == kDeviceStateIdle) {
+    if (last_status_update_time_ + std::chrono::seconds(10) < std::chrono::system_clock::now()) {
+        // Set status to clock "HH:MM"
+        time_t now = time(NULL);
+        struct tm* tm = localtime(&now);
+        // Check if the we have already set the time
+        if (tm->tm_year >= 2025 - 1900) {
+            char time_str[16];
+            strftime(time_str, sizeof(time_str), "%H:%M", tm);
+            SetStatus(time_str);
+        } else {
+            ESP_LOGW(TAG, "System time is not set, tm_year: %d", tm->tm_year);
+        }
+    }
+}
+
+    bool show_idle_info = false;
+    if (app.GetDeviceState() == kDeviceStateIdle && status_label_ != nullptr) {
+        const char* status_text = lv_label_get_text(status_label_);
+        if (status_text != nullptr && strchr(status_text, ':') != nullptr) {
+            show_idle_info = true;
+        }
+    }
+
+    if (idle_info_label_ != nullptr) {
+        if (show_idle_info) {
+            lv_obj_remove_flag(idle_info_label_, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(idle_info_label_, LV_OBJ_FLAG_HIDDEN);
         }
     }
 
