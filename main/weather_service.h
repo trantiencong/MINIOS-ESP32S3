@@ -13,13 +13,26 @@ struct WeatherInfo {
     bool valid = false;
 };
 
+struct GeoLocationInfo {
+    std::string city;
+    std::string latitude;
+    std::string longitude;
+    bool valid = false;
+};
+
 class WeatherService {
 public:
     bool FetchCurrent(WeatherInfo& out_info);
 
 private:
     bool HttpGet(const std::string& url, std::string& response);
-    bool ParseOneCallResponse(const std::string& response, WeatherInfo& out_info);
+    bool ParseGeoLocationResponse(const std::string& response, GeoLocationInfo& out_geo);
+    bool ParseOneCallResponse(
+        const std::string& response,
+        const std::string& location_name,
+        WeatherInfo& out_info
+    );
+    bool FetchGeoLocation(GeoLocationInfo& out_geo);
 };
 
 #endif

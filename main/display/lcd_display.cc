@@ -21,6 +21,7 @@
 LV_FONT_DECLARE(BUILTIN_TEXT_FONT);
 LV_FONT_DECLARE(BUILTIN_ICON_FONT);
 LV_FONT_DECLARE(font_awesome_30_4);
+LV_FONT_DECLARE(font_noto_vi_20_4);
 
 void LcdDisplay::InitializeLcdThemes() {
     auto text_font = std::make_shared<LvglBuiltInFont>(&BUILTIN_TEXT_FONT);
@@ -930,16 +931,65 @@ void LcdDisplay::SetupUI() {
     lv_label_set_text(status_label_, Lang::Strings::INITIALIZING);
     lv_obj_set_style_text_font(status_label_, &BUILTIN_TEXT_FONT, 0);
     lv_obj_align(status_label_, LV_ALIGN_CENTER, 0, -28);
-    idle_info_label_ = lv_label_create(status_bar_);
-    lv_obj_set_width(idle_info_label_, LV_HOR_RES * 0.96);
-    lv_label_set_long_mode(idle_info_label_, LV_LABEL_LONG_WRAP);
-    lv_obj_set_style_text_align(idle_info_label_, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_style_text_color(idle_info_label_, lvgl_theme->text_color(), 0);
-    lv_obj_set_style_text_font(idle_info_label_, &BUILTIN_TEXT_FONT, 0);
-    lv_obj_set_style_text_line_space(idle_info_label_, 1, 0);
-    lv_label_set_text(idle_info_label_, "Quy Nhơn\nTrời quang 29°C");
-    lv_obj_align(idle_info_label_, LV_ALIGN_CENTER, 0, 28);
-    lv_obj_add_flag(idle_info_label_, LV_OBJ_FLAG_HIDDEN);
+    idle_location_label_ = lv_label_create(status_bar_);
+    idle_metrics_container_ = lv_obj_create(status_bar_);
+    lv_obj_set_size(idle_metrics_container_, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_opa(idle_metrics_container_, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(idle_metrics_container_, 0, 0);
+    lv_obj_set_style_pad_all(idle_metrics_container_, 0, 0);
+    lv_obj_set_style_pad_column(idle_metrics_container_, 6, 0);
+    lv_obj_set_style_pad_row(idle_metrics_container_, 0, 0);
+    lv_obj_set_flex_flow(idle_metrics_container_, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(
+        idle_metrics_container_,
+        LV_FLEX_ALIGN_CENTER,
+        LV_FLEX_ALIGN_CENTER,
+        LV_FLEX_ALIGN_CENTER
+    );
+    lv_obj_align(idle_metrics_container_, LV_ALIGN_CENTER, 0, 40);
+    lv_obj_add_flag(idle_metrics_container_, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_width(idle_location_label_, LV_HOR_RES * 0.78);
+    lv_label_set_long_mode(idle_location_label_, LV_LABEL_LONG_WRAP);
+    lv_obj_set_style_text_align(idle_location_label_, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_color(idle_location_label_, lvgl_theme->text_color(), 0);
+    lv_obj_set_style_text_font(idle_location_label_, &font_noto_vi_20_4, 0);
+    lv_label_set_text(idle_location_label_, "Quy Nhon");
+    lv_obj_align(idle_location_label_, LV_ALIGN_CENTER, 0, 8);
+    lv_obj_add_flag(idle_location_label_, LV_OBJ_FLAG_HIDDEN);
+
+    idle_weather_icon_label_ = lv_label_create(idle_metrics_container_);
+    lv_label_set_text(idle_weather_icon_label_, "");
+    lv_obj_set_style_text_font(idle_weather_icon_label_, &BUILTIN_ICON_FONT, 0);
+    lv_obj_set_style_text_color(idle_weather_icon_label_, lvgl_theme->text_color(), 0);
+    // lv_obj_align(idle_weather_icon_label_, LV_ALIGN_CENTER, -24, 40);
+    lv_obj_add_flag(idle_weather_icon_label_, LV_OBJ_FLAG_HIDDEN);
+
+    idle_weather_label_ = lv_label_create(status_bar_);
+    lv_obj_set_width(idle_weather_label_, 96);
+    lv_label_set_long_mode(idle_weather_label_, LV_LABEL_LONG_WRAP);
+    lv_obj_set_style_text_align(idle_weather_label_, LV_TEXT_ALIGN_LEFT, 0);
+    lv_obj_set_style_text_color(idle_weather_label_, lvgl_theme->text_color(), 0);
+    lv_obj_set_style_text_font(idle_weather_label_, &font_noto_vi_20_4, 0);
+    lv_label_set_text(idle_weather_label_, "");
+    lv_obj_align(idle_weather_label_, LV_ALIGN_CENTER, 0, 38);
+    lv_obj_add_flag(idle_weather_label_, LV_OBJ_FLAG_HIDDEN);
+
+    idle_temp_icon_label_ = lv_label_create(idle_metrics_container_);
+    lv_label_set_text(idle_temp_icon_label_, FONT_AWESOME_TEMPERATURE_HALF);
+    lv_obj_set_style_text_font(idle_temp_icon_label_, &BUILTIN_ICON_FONT, 0);
+    lv_obj_set_style_text_color(idle_temp_icon_label_, lvgl_theme->text_color(), 0);
+    // lv_obj_align(idle_temp_icon_label_, LV_ALIGN_CENTER, 4, 40);
+    lv_obj_add_flag(idle_temp_icon_label_, LV_OBJ_FLAG_HIDDEN);
+
+    idle_temp_label_ = lv_label_create(idle_metrics_container_);
+    lv_obj_set_width(idle_temp_label_, LV_SIZE_CONTENT);
+    lv_label_set_long_mode(idle_temp_label_, LV_LABEL_LONG_WRAP);
+    lv_obj_set_style_text_align(idle_temp_label_, LV_TEXT_ALIGN_LEFT, 0);
+    lv_obj_set_style_text_color(idle_temp_label_, lvgl_theme->text_color(), 0);
+    lv_obj_set_style_text_font(idle_temp_label_, &font_noto_vi_20_4, 0);
+    lv_label_set_text(idle_temp_label_, "23°C");
+    // lv_obj_align(idle_temp_label_, LV_ALIGN_CENTER, 38, 40);
+    lv_obj_add_flag(idle_temp_label_, LV_OBJ_FLAG_HIDDEN);
 
 #if CONFIG_USE_MULTILINE_CHAT_MESSAGE
     /* Bottom bar - auto height, grows upward with wrapped text */
@@ -976,7 +1026,7 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_style_pad_right(bottom_bar_, lvgl_theme->spacing(4), 0);
     lv_obj_set_style_border_width(bottom_bar_, 0, 0);
     lv_obj_set_scrollbar_mode(bottom_bar_, LV_SCROLLBAR_MODE_OFF);
-    lv_obj_align(bottom_bar_, LV_ALIGN_BOTTOM_MID, 0, 0);
+    // lv_obj_align(bottom_bar_, LV_ALIGN_BOTTOM_MID, 0, 0);
 
     /* chat_message_label_ placed in bottom_bar_, single-line horizontal scroll */
     chat_message_label_ = lv_label_create(bottom_bar_);
@@ -985,7 +1035,7 @@ void LcdDisplay::SetupUI() {
     lv_label_set_long_mode(chat_message_label_, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_set_style_text_align(chat_message_label_, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_color(chat_message_label_, lvgl_theme->text_color(), 0);
-    lv_obj_align(chat_message_label_, LV_ALIGN_CENTER, 0, 0);
+    // lv_obj_align(chat_message_label_, LV_ALIGN_CENTER, 0, 0);
 
     // Start scrolling after a delay (short text won't scroll)
     static lv_anim_t a;
@@ -1296,8 +1346,25 @@ void LcdDisplay::SetTheme(Theme* theme) {
         lv_obj_set_style_text_color(chat_message_label_, lvgl_theme->text_color(), 0);
     }
 
-    if (idle_info_label_ != nullptr) {
-        lv_obj_set_style_text_color(idle_info_label_, lvgl_theme->text_color(), 0);
+    if (idle_location_label_ != nullptr) {
+    lv_obj_set_style_text_color(idle_location_label_, lvgl_theme->text_color(), 0);
+    lv_obj_set_style_text_font(idle_location_label_, &font_noto_vi_20_4, 0);
+    }
+    if (idle_weather_icon_label_ != nullptr) {
+        lv_obj_set_style_text_color(idle_weather_icon_label_, lvgl_theme->text_color(), 0);
+        lv_obj_set_style_text_font(idle_weather_icon_label_, &BUILTIN_ICON_FONT, 0);
+    }
+    if (idle_weather_label_ != nullptr) {
+        lv_obj_set_style_text_color(idle_weather_label_, lvgl_theme->text_color(), 0);
+        lv_obj_set_style_text_font(idle_weather_label_, &font_noto_vi_20_4, 0);
+    }
+    if (idle_temp_icon_label_ != nullptr) {
+        lv_obj_set_style_text_color(idle_temp_icon_label_, lvgl_theme->text_color(), 0);
+        lv_obj_set_style_text_font(idle_temp_icon_label_, &BUILTIN_ICON_FONT, 0);
+    }
+    if (idle_temp_label_ != nullptr) {
+        lv_obj_set_style_text_color(idle_temp_label_, lvgl_theme->text_color(), 0);
+        lv_obj_set_style_text_font(idle_temp_label_, &font_noto_vi_20_4, 0);
     }
 
     if (emoji_label_ != nullptr) {

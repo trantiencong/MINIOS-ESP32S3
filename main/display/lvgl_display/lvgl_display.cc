@@ -52,10 +52,22 @@ LvglDisplay::~LvglDisplay() {
         lv_obj_del(notification_label_);
     }
     if (status_label_ != nullptr) {
-        lv_obj_del(status_label_);
+    lv_obj_del(status_label_);
     }
-    if (idle_info_label_ != nullptr) {
-        lv_obj_del(idle_info_label_);
+    if (idle_location_label_ != nullptr) {
+    lv_obj_del(idle_location_label_);
+    }
+    if (idle_weather_icon_label_ != nullptr) {
+        lv_obj_del(idle_weather_icon_label_);
+    }
+    if (idle_weather_label_ != nullptr) {
+        lv_obj_del(idle_weather_label_);
+    }
+    if (idle_temp_icon_label_ != nullptr) {
+        lv_obj_del(idle_temp_icon_label_);
+    }
+    if (idle_temp_label_ != nullptr) {
+        lv_obj_del(idle_temp_label_);
     }
     if (mute_label_ != nullptr) {
         lv_obj_del(mute_label_);
@@ -92,18 +104,28 @@ void LvglDisplay::SetStatus(const char* status) {
 void LvglDisplay::SetIdleInfo(const char* location, const char* weather, const char* temperature) {
     DisplayLockGuard lock(this);
 
-    if (idle_info_label_ == nullptr) {
-        return;
-    }
-
     const char* safe_location = (location != nullptr) ? location : "";
     const char* safe_weather = (weather != nullptr) ? weather : "";
     const char* safe_temperature = (temperature != nullptr) ? temperature : "";
 
-    char idle_text[128];
-    snprintf(idle_text, sizeof(idle_text), "%s\n%s %s", safe_location, safe_weather, safe_temperature);
+    if (idle_location_label_ != nullptr) {
+        lv_label_set_text(idle_location_label_, safe_location);
+    }
+    if (idle_weather_label_ != nullptr) {
+        lv_label_set_text(idle_weather_label_, safe_weather);
+    }
+    if (idle_temp_label_ != nullptr) {
+        lv_label_set_text(idle_temp_label_, safe_temperature);
+    }
+}
+void LvglDisplay::SetIdleWeatherIcon(const char* icon_text) {
+    DisplayLockGuard lock(this);
 
-    lv_label_set_text(idle_info_label_, idle_text);
+    if (idle_weather_icon_label_ == nullptr) {
+        return;
+    }
+
+    lv_label_set_text(idle_weather_icon_label_, icon_text ? icon_text : "");
 }
 
 void LvglDisplay::ShowNotification(const std::string &notification, int duration_ms) {
@@ -133,6 +155,7 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
     auto& app = Application::GetInstance();
     auto& board = Board::GetInstance();
     auto codec = board.GetAudioCodec();
+    
 
     // Update mute icon
     {
@@ -174,14 +197,36 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
             show_idle_info = true;
         }
     }
-
-    if (idle_info_label_ != nullptr) {
-        if (show_idle_info) {
-            lv_obj_remove_flag(idle_info_label_, LV_OBJ_FLAG_HIDDEN);
-        } else {
-            lv_obj_add_flag(idle_info_label_, LV_OBJ_FLAG_HIDDEN);
-        }
+    if (idle_metrics_container_ != nullptr) {
+    if (show_idle_info) {
+        lv_obj_remove_flag(idle_metrics_container_, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_add_flag(idle_metrics_container_, LV_OBJ_FLAG_HIDDEN);
     }
+}
+
+    if (idle_location_label_ != nullptr) {
+    if (show_idle_info) lv_obj_remove_flag(idle_location_label_, LV_OBJ_FLAG_HIDDEN);
+    else lv_obj_add_flag(idle_location_label_, LV_OBJ_FLAG_HIDDEN);
+    }
+
+    if (idle_weather_icon_label_ != nullptr) {
+        if (show_idle_info) lv_obj_remove_flag(idle_weather_icon_label_, LV_OBJ_FLAG_HIDDEN);
+        else lv_obj_add_flag(idle_weather_icon_label_, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (idle_weather_label_ != nullptr) {
+    lv_obj_add_flag(idle_weather_label_, LV_OBJ_FLAG_HIDDEN);
+    }
+
+    if (idle_temp_icon_label_ != nullptr) {
+        if (show_idle_info) lv_obj_remove_flag(idle_temp_icon_label_, LV_OBJ_FLAG_HIDDEN);
+        else lv_obj_add_flag(idle_temp_icon_label_, LV_OBJ_FLAG_HIDDEN);
+    }
+
+    if (idle_temp_label_ != nullptr) {
+        if (show_idle_info) lv_obj_remove_flag(idle_temp_label_, LV_OBJ_FLAG_HIDDEN);
+        else lv_obj_add_flag(idle_temp_label_, LV_OBJ_FLAG_HIDDEN);
+    }   
 
     esp_pm_lock_acquire(pm_lock_);
     // Update battery icon

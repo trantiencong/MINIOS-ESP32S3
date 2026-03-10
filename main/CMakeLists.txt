@@ -37,7 +37,7 @@ set(SOURCES "audio/audio_codec.cc"
             "settings.cc"
             "device_state_machine.cc"
             "assets.cc"
-            "assets/fonts/nunito_24.c"
+            "assets/fonts/font_noto_vi_20_4.c"
             "main.cc"
             )
 
@@ -640,7 +640,7 @@ elseif(CONFIG_BOARD_TYPE_ZHENGCHEN_1_54TFT_WIFI)
 elseif(CONFIG_BOARD_TYPE_MINIOS_1_54TFT_WIFI)
     set(BOARD_TYPE "zhengchen-1.54tft-wifi")
     set(BOARD_NAME "MiniOS")
-    set(BUILTIN_TEXT_FONT font_puhui_basic_20_4)
+    set(BUILTIN_TEXT_FONT font_noto_basic_20_4)
     set(BUILTIN_ICON_FONT font_awesome_20_4)
     set(DEFAULT_EMOJI_COLLECTION twemoji_64)
 elseif(CONFIG_BOARD_TYPE_MINSI_K08_DUAL)

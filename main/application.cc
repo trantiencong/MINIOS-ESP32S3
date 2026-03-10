@@ -945,6 +945,16 @@ bool Application::RefreshWeatherIfNeeded(bool force) {
 }
 
 const char* Application::MapWeatherIconCode(const std::string& icon_code) {
+    if (icon_code == "01d") return FONT_AWESOME_SUN;
+    if (icon_code == "01n") return FONT_AWESOME_MOON;
+    if (icon_code == "02d") return FONT_AWESOME_CLOUD_SUN;
+    if (icon_code == "02n") return FONT_AWESOME_CLOUD_MOON;
+    if (icon_code == "03d" || icon_code == "03n" || icon_code == "04d" || icon_code == "04n") return FONT_AWESOME_CLOUD;
+    if (icon_code == "09d" || icon_code == "09n") return FONT_AWESOME_CLOUD_SHOWERS_HEAVY;
+    if (icon_code == "10d" || icon_code == "10n") return FONT_AWESOME_CLOUD_RAIN;
+    if (icon_code == "11d" || icon_code == "11n") return FONT_AWESOME_CLOUD_SHOWERS_HEAVY;
+    if (icon_code == "13d" || icon_code == "13n") return FONT_AWESOME_SNOWFLAKE;
+    if (icon_code == "50d" || icon_code == "50n") return FONT_AWESOME_SMOG;
     return "";
 }
 
@@ -952,10 +962,12 @@ void Application::UpdateIdleInfo() {
     auto display = Board::GetInstance().GetDisplay();
 
     if (!RefreshWeatherIfNeeded(false)) {
+        display->SetIdleWeatherIcon("");
         display->SetIdleInfo(CONFIG_OPENWEATHER_LOCATION_NAME, "Weather is unavailable", "--");
         return;
     }
-
+    // Hiển thị icon thời tiết 
+    display->SetIdleWeatherIcon(MapWeatherIconCode(weather_info_.icon_code));
     display->SetIdleInfo(
         weather_info_.location.c_str(),
         weather_info_.description.c_str(),

@@ -30,6 +30,9 @@ void Display::SetIdleInfo(const char* location, const char* weather, const char*
         weather ? weather : "",
         temperature ? temperature : "");
 }
+void Display::SetIdleWeatherIcon(const char* icon_text) {
+    ESP_LOGW(TAG, "SetIdleWeatherIcon: %s", icon_text ? icon_text : "");
+}
 
 void Display::ShowNotification(const char* notification, int duration_ms) {
     ESP_LOGW(TAG, "ShowNotification: %s", notification);
