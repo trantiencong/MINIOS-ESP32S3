@@ -18,7 +18,7 @@ public:
     virtual ~LvglDisplay();
 
     virtual void SetStatus(const char* status);
-    virtual void SetIdleInfo(const char* location, const char* weather, const char* temperature);
+    virtual void SetIdleInfo(const char* location, const char* weather, const char* temperature, const char* humidity);
     virtual void SetIdleWeatherIcon(const char* icon_text);
     virtual void ShowNotification(const char* notification, int duration_ms = 3000);
     virtual void ShowNotification(const std::string &notification, int duration_ms = 3000);
@@ -37,8 +37,9 @@ protected:
     lv_obj_t *idle_metrics_container_ = nullptr;
     lv_obj_t *idle_weather_icon_label_ = nullptr;
     lv_obj_t *idle_weather_label_ = nullptr;
-    lv_obj_t *idle_temp_icon_label_ = nullptr;
     lv_obj_t *idle_temp_label_ = nullptr;
+    lv_obj_t *idle_temp_icon_label_ = nullptr;
+    lv_obj_t *idle_humidity_label_ = nullptr;
     lv_obj_t *notification_label_ = nullptr;
     lv_obj_t *mute_label_ = nullptr;
     lv_obj_t *battery_label_ = nullptr;

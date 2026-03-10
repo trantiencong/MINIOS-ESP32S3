@@ -963,15 +963,16 @@ void Application::UpdateIdleInfo() {
 
     if (!RefreshWeatherIfNeeded(false)) {
         display->SetIdleWeatherIcon("");
-        display->SetIdleInfo(CONFIG_OPENWEATHER_LOCATION_NAME, "Weather is unavailable", "--");
+        display->SetIdleInfo(CONFIG_OPENWEATHER_LOCATION_NAME, "No Weather", "--", "--");
         return;
     }
     // Hiển thị icon thời tiết 
     display->SetIdleWeatherIcon(MapWeatherIconCode(weather_info_.icon_code));
     display->SetIdleInfo(
-        weather_info_.location.c_str(),
-        weather_info_.description.c_str(),
-        weather_info_.temperature.c_str()
+    weather_info_.location.c_str(),
+    weather_info_.description.c_str(),
+    weather_info_.temperature.c_str(),
+    weather_info_.humidity.c_str()
     );
 }
 

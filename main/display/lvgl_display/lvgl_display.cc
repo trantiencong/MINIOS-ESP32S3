@@ -63,11 +63,14 @@ LvglDisplay::~LvglDisplay() {
     if (idle_weather_label_ != nullptr) {
         lv_obj_del(idle_weather_label_);
     }
+    if (idle_temp_label_ != nullptr) {
+        lv_obj_del(idle_temp_label_);
+    }
     if (idle_temp_icon_label_ != nullptr) {
         lv_obj_del(idle_temp_icon_label_);
     }
-    if (idle_temp_label_ != nullptr) {
-        lv_obj_del(idle_temp_label_);
+    if (idle_humidity_label_ != nullptr) {
+        lv_obj_del(idle_humidity_label_);
     }
     if (mute_label_ != nullptr) {
         lv_obj_del(mute_label_);
@@ -101,12 +104,13 @@ void LvglDisplay::SetStatus(const char* status) {
     last_status_update_time_ = std::chrono::system_clock::now();
 }
 
-void LvglDisplay::SetIdleInfo(const char* location, const char* weather, const char* temperature) {
+void LvglDisplay::SetIdleInfo(const char* location, const char* weather, const char* temperature, const char* humidity) {
     DisplayLockGuard lock(this);
 
     const char* safe_location = (location != nullptr) ? location : "";
     const char* safe_weather = (weather != nullptr) ? weather : "";
     const char* safe_temperature = (temperature != nullptr) ? temperature : "";
+    const char* safe_humidity = (humidity != nullptr) ? humidity : "";
 
     if (idle_location_label_ != nullptr) {
         lv_label_set_text(idle_location_label_, safe_location);
@@ -116,6 +120,9 @@ void LvglDisplay::SetIdleInfo(const char* location, const char* weather, const c
     }
     if (idle_temp_label_ != nullptr) {
         lv_label_set_text(idle_temp_label_, safe_temperature);
+    }
+    if (idle_humidity_label_ != nullptr) {
+        lv_label_set_text(idle_humidity_label_, safe_humidity);
     }
 }
 void LvglDisplay::SetIdleWeatherIcon(const char* icon_text) {
@@ -227,7 +234,10 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
         if (show_idle_info) lv_obj_remove_flag(idle_temp_label_, LV_OBJ_FLAG_HIDDEN);
         else lv_obj_add_flag(idle_temp_label_, LV_OBJ_FLAG_HIDDEN);
     }   
-
+    if (idle_humidity_label_ != nullptr) {
+    if (show_idle_info) lv_obj_remove_flag(idle_humidity_label_, LV_OBJ_FLAG_HIDDEN);
+    else lv_obj_add_flag(idle_humidity_label_, LV_OBJ_FLAG_HIDDEN);
+    }
     esp_pm_lock_acquire(pm_lock_);
     // Update battery icon
     int battery_level;

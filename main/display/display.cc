@@ -24,11 +24,12 @@ void Display::SetStatus(const char* status) {
     ESP_LOGW(TAG, "SetStatus: %s", status);
 }
 
-void Display::SetIdleInfo(const char* location, const char* weather, const char* temperature) {
-    ESP_LOGW(TAG, "SetIdleInfo: %s | %s | %s",
+void Display::SetIdleInfo(const char* location, const char* weather, const char* temperature, const char* humidity) {
+    ESP_LOGW(TAG, "SetIdleInfo: %s | %s | %s | %s",
         location ? location : "",
         weather ? weather : "",
-        temperature ? temperature : "");
+        temperature ? temperature : "",
+        humidity ? humidity : "");
 }
 void Display::SetIdleWeatherIcon(const char* icon_text) {
     ESP_LOGW(TAG, "SetIdleWeatherIcon: %s", icon_text ? icon_text : "");

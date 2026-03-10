@@ -961,25 +961,7 @@ void LcdDisplay::SetupUI() {
     lv_label_set_text(idle_weather_icon_label_, "");
     lv_obj_set_style_text_font(idle_weather_icon_label_, &BUILTIN_ICON_FONT, 0);
     lv_obj_set_style_text_color(idle_weather_icon_label_, lvgl_theme->text_color(), 0);
-    // lv_obj_align(idle_weather_icon_label_, LV_ALIGN_CENTER, -24, 40);
     lv_obj_add_flag(idle_weather_icon_label_, LV_OBJ_FLAG_HIDDEN);
-
-    idle_weather_label_ = lv_label_create(status_bar_);
-    lv_obj_set_width(idle_weather_label_, 96);
-    lv_label_set_long_mode(idle_weather_label_, LV_LABEL_LONG_WRAP);
-    lv_obj_set_style_text_align(idle_weather_label_, LV_TEXT_ALIGN_LEFT, 0);
-    lv_obj_set_style_text_color(idle_weather_label_, lvgl_theme->text_color(), 0);
-    lv_obj_set_style_text_font(idle_weather_label_, &font_noto_vi_20_4, 0);
-    lv_label_set_text(idle_weather_label_, "");
-    lv_obj_align(idle_weather_label_, LV_ALIGN_CENTER, 0, 38);
-    lv_obj_add_flag(idle_weather_label_, LV_OBJ_FLAG_HIDDEN);
-
-    idle_temp_icon_label_ = lv_label_create(idle_metrics_container_);
-    lv_label_set_text(idle_temp_icon_label_, FONT_AWESOME_TEMPERATURE_HALF);
-    lv_obj_set_style_text_font(idle_temp_icon_label_, &BUILTIN_ICON_FONT, 0);
-    lv_obj_set_style_text_color(idle_temp_icon_label_, lvgl_theme->text_color(), 0);
-    // lv_obj_align(idle_temp_icon_label_, LV_ALIGN_CENTER, 4, 40);
-    lv_obj_add_flag(idle_temp_icon_label_, LV_OBJ_FLAG_HIDDEN);
 
     idle_temp_label_ = lv_label_create(idle_metrics_container_);
     lv_obj_set_width(idle_temp_label_, LV_SIZE_CONTENT);
@@ -988,8 +970,22 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_style_text_color(idle_temp_label_, lvgl_theme->text_color(), 0);
     lv_obj_set_style_text_font(idle_temp_label_, &font_noto_vi_20_4, 0);
     lv_label_set_text(idle_temp_label_, "23°C");
-    // lv_obj_align(idle_temp_label_, LV_ALIGN_CENTER, 38, 40);
     lv_obj_add_flag(idle_temp_label_, LV_OBJ_FLAG_HIDDEN);
+
+    idle_temp_icon_label_ = lv_label_create(idle_metrics_container_);
+    lv_label_set_text(idle_temp_icon_label_, FONT_AWESOME_TEMPERATURE_HALF);
+    lv_obj_set_style_text_font(idle_temp_icon_label_, &BUILTIN_ICON_FONT, 0);
+    lv_obj_set_style_text_color(idle_temp_icon_label_, lvgl_theme->text_color(), 0);
+    lv_obj_add_flag(idle_temp_icon_label_, LV_OBJ_FLAG_HIDDEN);
+
+    idle_humidity_label_ = lv_label_create(idle_metrics_container_);
+    lv_obj_set_width(idle_humidity_label_, LV_SIZE_CONTENT);
+    lv_label_set_long_mode(idle_humidity_label_, LV_LABEL_LONG_WRAP);
+    lv_obj_set_style_text_align(idle_humidity_label_, LV_TEXT_ALIGN_LEFT, 0);
+    lv_obj_set_style_text_color(idle_humidity_label_, lvgl_theme->text_color(), 0);
+    lv_obj_set_style_text_font(idle_humidity_label_, &font_noto_vi_20_4, 0);
+    lv_label_set_text(idle_humidity_label_, "80%");
+    lv_obj_add_flag(idle_humidity_label_, LV_OBJ_FLAG_HIDDEN);
 
 #if CONFIG_USE_MULTILINE_CHAT_MESSAGE
     /* Bottom bar - auto height, grows upward with wrapped text */
@@ -1366,7 +1362,10 @@ void LcdDisplay::SetTheme(Theme* theme) {
         lv_obj_set_style_text_color(idle_temp_label_, lvgl_theme->text_color(), 0);
         lv_obj_set_style_text_font(idle_temp_label_, &font_noto_vi_20_4, 0);
     }
-
+    if (idle_humidity_label_ != nullptr) {
+    lv_obj_set_style_text_color(idle_humidity_label_, lvgl_theme->text_color(), 0);
+    lv_obj_set_style_text_font(idle_humidity_label_, &font_noto_vi_20_4, 0);
+    }
     if (emoji_label_ != nullptr) {
         lv_obj_set_style_text_color(emoji_label_, lvgl_theme->text_color(), 0);
     }

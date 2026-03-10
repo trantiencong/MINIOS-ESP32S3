@@ -8,6 +8,7 @@ struct WeatherInfo {
     std::string location;
     std::string description;
     std::string temperature;
+    std::string humidity;
     std::string icon_code;
     int64_t fetched_at_ms = 0;
     bool valid = false;

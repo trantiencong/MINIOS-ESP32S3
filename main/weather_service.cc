@@ -91,6 +91,7 @@ bool WeatherService::ParseOneCallResponse(
     }
 
     cJSON* temp = cJSON_GetObjectItemCaseSensitive(current, "temp");
+    cJSON* humidity = cJSON_GetObjectItemCaseSensitive(current, "humidity");
     cJSON* weather_array = cJSON_GetObjectItemCaseSensitive(current, "weather");
     if (!cJSON_IsArray(weather_array) || cJSON_GetArraySize(weather_array) <= 0) {
         cJSON_Delete(root);
@@ -101,17 +102,20 @@ bool WeatherService::ParseOneCallResponse(
     cJSON* description = cJSON_GetObjectItemCaseSensitive(weather0, "description");
     cJSON* icon = cJSON_GetObjectItemCaseSensitive(weather0, "icon");
 
-    if (!cJSON_IsNumber(temp) || !cJSON_IsString(description) || !cJSON_IsString(icon)) {
-        cJSON_Delete(root);
-        return false;
-    }
+    if (!cJSON_IsNumber(temp) || !cJSON_IsNumber(humidity) || !cJSON_IsString(description) || !cJSON_IsString(icon)) {
+    cJSON_Delete(root);
+    return false;
+}
 
     char temp_text[32];
+    char humidity_text[32];
     snprintf(temp_text, sizeof(temp_text), "%.0f°C", temp->valuedouble);
+    snprintf(humidity_text, sizeof(humidity_text), "%.0f%%", humidity->valuedouble);
 
     out_info.location = location_name;
     out_info.description = description->valuestring ? description->valuestring : "";
     out_info.temperature = temp_text;
+    out_info.humidity = humidity_text;
     out_info.icon_code = icon->valuestring ? icon->valuestring : "";
     out_info.fetched_at_ms = esp_timer_get_time() / 1000;
     out_info.valid = true;
