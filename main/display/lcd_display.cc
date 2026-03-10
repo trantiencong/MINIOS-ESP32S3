@@ -988,10 +988,10 @@ void LcdDisplay::SetupUI() {
     lv_obj_add_flag(idle_humidity_label_, LV_OBJ_FLAG_HIDDEN);
 
 #if CONFIG_USE_MULTILINE_CHAT_MESSAGE
-    /* Bottom bar - fixed height, anchored at bottom, clipped to avoid rising into top area */
+    /* Bottom bar - tall enough to grow upward close to topbar, but still anchored at bottom */
     bottom_bar_ = lv_obj_create(screen);
     lv_obj_set_width(bottom_bar_, LV_HOR_RES);
-    lv_obj_set_height(bottom_bar_, text_font->line_height * 3 + lvgl_theme->spacing(6));
+    lv_obj_set_height(bottom_bar_, LV_VER_RES - 44);
     lv_obj_set_style_radius(bottom_bar_, 0, 0);
     lv_obj_set_style_bg_color(bottom_bar_, lvgl_theme->background_color(), 0);
     lv_obj_set_style_bg_opa(bottom_bar_, LV_OPA_50, 0);
@@ -1011,8 +1011,8 @@ void LcdDisplay::SetupUI() {
     lv_label_set_long_mode(chat_message_label_, LV_LABEL_LONG_WRAP);
     lv_obj_set_style_text_align(chat_message_label_, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_color(chat_message_label_, lvgl_theme->text_color(), 0);
-    lv_obj_set_style_text_line_space(chat_message_label_, 0, 0);
-    lv_obj_center(chat_message_label_);
+    lv_obj_set_style_text_line_space(chat_message_label_, -2, 0);
+    lv_obj_align(chat_message_label_, LV_ALIGN_BOTTOM_MID, 0, 0);
     lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);  // Hide until there is content
 #else
     /* Top layer: Bottom bar - fixed height at bottom */
@@ -1257,7 +1257,7 @@ void LcdDisplay::SetTheme(Theme* theme) {
     
     // Update top bar background color with 50% opacity
     if (top_bar_ != nullptr) {
-        lv_obj_set_style_bg_opa(top_bar_, LV_OPA_50, 0);
+        lv_obj_set_style_bg_opa(top_bar_, LV_OPA_TRANSP, 0);
         lv_obj_set_style_bg_color(top_bar_, lvgl_theme->background_color(), 0);
     }
     
