@@ -19,7 +19,7 @@
         "SWITCH_TO_4G_NETWORK": "Đang chuyển sang 4G...",
         "STANDBY": "Chờ",
         "CONNECT_TO": "Kết nối Wi-Fi: ",
-        "CONNECTING": "Đang kết nối...",
+        "CONNECTING": "",
         "CONNECTION_SUCCESSFUL": "Kết nối thành công",
         "CONNECTED_TO": "Đã kết nối đến ",
         "LISTENING": "Đang lắng nghe...",

@@ -928,9 +928,10 @@ void LcdDisplay::SetupUI() {
     lv_label_set_long_mode(status_label_, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_set_style_text_align(status_label_, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_color(status_label_, lvgl_theme->text_color(), 0);
+    lv_obj_set_style_text_opa(status_label_, LV_OPA_COVER, 0);
     lv_label_set_text(status_label_, Lang::Strings::INITIALIZING);
     lv_obj_set_style_text_font(status_label_, &BUILTIN_TEXT_FONT, 0);
-    lv_obj_align(status_label_, LV_ALIGN_CENTER, 0, -28);
+    lv_obj_align(status_label_, LV_ALIGN_CENTER, 0, 0);
     idle_location_label_ = lv_label_create(status_bar_);
     idle_metrics_container_ = lv_obj_create(status_bar_);
     lv_obj_set_size(idle_metrics_container_, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
