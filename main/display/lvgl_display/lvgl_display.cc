@@ -21,25 +21,36 @@ LvglDisplay::LvglDisplay() {
     LvglDisplay *display = static_cast<LvglDisplay*>(arg);
     DisplayLockGuard lock(display);
 
-    lv_obj_add_flag(display->notification_label_, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_remove_flag(display->status_label_, LV_OBJ_FLAG_HIDDEN);
+    if (display->notification_label_ != nullptr) {
+        lv_obj_add_flag(display->notification_label_, LV_OBJ_FLAG_HIDDEN);
+    }
 
     bool show_idle_block = false;
     if (display->status_label_ != nullptr) {
         const char* status_text = lv_label_get_text(display->status_label_);
         if (status_text != nullptr && strchr(status_text, ':') != nullptr) {
             show_idle_block = true;
+            lv_obj_align(display->status_label_, LV_ALIGN_CENTER, 0, -28);
+        } else {
+            lv_obj_align(display->status_label_, LV_ALIGN_CENTER, 0, 0);
         }
+        lv_obj_remove_flag(display->status_label_, LV_OBJ_FLAG_HIDDEN);
     }
 
     if (display->idle_location_label_ != nullptr) {
-        if (show_idle_block) lv_obj_remove_flag(display->idle_location_label_, LV_OBJ_FLAG_HIDDEN);
-        else lv_obj_add_flag(display->idle_location_label_, LV_OBJ_FLAG_HIDDEN);
+        if (show_idle_block) {
+            lv_obj_remove_flag(display->idle_location_label_, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(display->idle_location_label_, LV_OBJ_FLAG_HIDDEN);
+        }
     }
 
     if (display->idle_metrics_container_ != nullptr) {
-        if (show_idle_block) lv_obj_remove_flag(display->idle_metrics_container_, LV_OBJ_FLAG_HIDDEN);
-        else lv_obj_add_flag(display->idle_metrics_container_, LV_OBJ_FLAG_HIDDEN);
+        if (show_idle_block) {
+            lv_obj_remove_flag(display->idle_metrics_container_, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(display->idle_metrics_container_, LV_OBJ_FLAG_HIDDEN);
+        }
     }
 },
         .arg = this,
@@ -116,9 +127,22 @@ void LvglDisplay::SetStatus(const char* status) {
         }
         return;
     }
-    lv_label_set_text(status_label_, status);
+
+    const char* safe_status = (status != nullptr) ? status : "";
+    bool is_clock_text = (strchr(safe_status, ':') != nullptr);
+
+    lv_label_set_text(status_label_, safe_status);
     lv_obj_remove_flag(status_label_, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(notification_label_, LV_OBJ_FLAG_HIDDEN);
+
+    if (notification_label_ != nullptr) {
+        lv_obj_add_flag(notification_label_, LV_OBJ_FLAG_HIDDEN);
+    }
+
+    if (is_clock_text) {
+        lv_obj_align(status_label_, LV_ALIGN_CENTER, 0, -28);
+    } else {
+        lv_obj_align(status_label_, LV_ALIGN_CENTER, 0, 0);
+    }
 
     last_status_update_time_ = std::chrono::system_clock::now();
 }
@@ -169,23 +193,26 @@ void LvglDisplay::ShowNotification(const char* notification, int duration_ms) {
         }
         return;
     }
-    lv_label_set_text(notification_label_, notification);
-lv_obj_remove_flag(notification_label_, LV_OBJ_FLAG_HIDDEN);
+    const char* safe_notification = (notification != nullptr) ? notification : "";
 
-if (status_label_ != nullptr) {
-    lv_obj_add_flag(status_label_, LV_OBJ_FLAG_HIDDEN);
-}
+    lv_label_set_text(notification_label_, safe_notification);
+    lv_obj_align(notification_label_, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_remove_flag(notification_label_, LV_OBJ_FLAG_HIDDEN);
 
-if (idle_location_label_ != nullptr) {
-    lv_obj_add_flag(idle_location_label_, LV_OBJ_FLAG_HIDDEN);
-}
+    if (status_label_ != nullptr) {
+        lv_obj_add_flag(status_label_, LV_OBJ_FLAG_HIDDEN);
+    }
 
-if (idle_metrics_container_ != nullptr) {
-    lv_obj_add_flag(idle_metrics_container_, LV_OBJ_FLAG_HIDDEN);
-}
+    if (idle_location_label_ != nullptr) {
+        lv_obj_add_flag(idle_location_label_, LV_OBJ_FLAG_HIDDEN);
+    }
 
-esp_timer_stop(notification_timer_);
-ESP_ERROR_CHECK(esp_timer_start_once(notification_timer_, duration_ms * 1000));
+    if (idle_metrics_container_ != nullptr) {
+        lv_obj_add_flag(idle_metrics_container_, LV_OBJ_FLAG_HIDDEN);
+    }
+
+    esp_timer_stop(notification_timer_);
+    ESP_ERROR_CHECK(esp_timer_start_once(notification_timer_, duration_ms * 1000));
 }
 
 void LvglDisplay::UpdateStatusBar(bool update_all) {

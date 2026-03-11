@@ -300,14 +300,14 @@ void Application::HandleActivationDoneEvent() {
     ESP_LOGI(TAG, "Activation done");
 
     SystemInfo::PrintHeapStats();
-    SetDeviceState(kDeviceStateIdle);
 
     has_server_time_ = ota_->HasServerTime();
 
     auto display = Board::GetInstance().GetDisplay();
-    std::string message = std::string(Lang::Strings::VERSION) + ota_->GetCurrentVersion();
-    display->ShowNotification(message.c_str());
     display->SetChatMessage("system", "");
+
+    SetDeviceState(kDeviceStateIdle);
+    display->UpdateStatusBar(true);
 
     // Release OTA object after activation is complete
     ota_.reset();
