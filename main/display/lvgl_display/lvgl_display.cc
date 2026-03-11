@@ -18,11 +18,30 @@ LvglDisplay::LvglDisplay() {
     // Notification timer
     esp_timer_create_args_t notification_timer_args = {
         .callback = [](void *arg) {
-            LvglDisplay *display = static_cast<LvglDisplay*>(arg);
-            DisplayLockGuard lock(display);
-            lv_obj_add_flag(display->notification_label_, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_remove_flag(display->status_label_, LV_OBJ_FLAG_HIDDEN);
-        },
+    LvglDisplay *display = static_cast<LvglDisplay*>(arg);
+    DisplayLockGuard lock(display);
+
+    lv_obj_add_flag(display->notification_label_, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_remove_flag(display->status_label_, LV_OBJ_FLAG_HIDDEN);
+
+    bool show_idle_block = false;
+    if (display->status_label_ != nullptr) {
+        const char* status_text = lv_label_get_text(display->status_label_);
+        if (status_text != nullptr && strchr(status_text, ':') != nullptr) {
+            show_idle_block = true;
+        }
+    }
+
+    if (display->idle_location_label_ != nullptr) {
+        if (show_idle_block) lv_obj_remove_flag(display->idle_location_label_, LV_OBJ_FLAG_HIDDEN);
+        else lv_obj_add_flag(display->idle_location_label_, LV_OBJ_FLAG_HIDDEN);
+    }
+
+    if (display->idle_metrics_container_ != nullptr) {
+        if (show_idle_block) lv_obj_remove_flag(display->idle_metrics_container_, LV_OBJ_FLAG_HIDDEN);
+        else lv_obj_add_flag(display->idle_metrics_container_, LV_OBJ_FLAG_HIDDEN);
+    }
+},
         .arg = this,
         .dispatch_method = ESP_TIMER_TASK,
         .name = "notification_timer",
@@ -151,18 +170,28 @@ void LvglDisplay::ShowNotification(const char* notification, int duration_ms) {
         return;
     }
     lv_label_set_text(notification_label_, notification);
-    lv_obj_remove_flag(notification_label_, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(status_label_, LV_OBJ_FLAG_HIDDEN);
+lv_obj_remove_flag(notification_label_, LV_OBJ_FLAG_HIDDEN);
 
-    esp_timer_stop(notification_timer_);
-    ESP_ERROR_CHECK(esp_timer_start_once(notification_timer_, duration_ms * 1000));
+if (status_label_ != nullptr) {
+    lv_obj_add_flag(status_label_, LV_OBJ_FLAG_HIDDEN);
+}
+
+if (idle_location_label_ != nullptr) {
+    lv_obj_add_flag(idle_location_label_, LV_OBJ_FLAG_HIDDEN);
+}
+
+if (idle_metrics_container_ != nullptr) {
+    lv_obj_add_flag(idle_metrics_container_, LV_OBJ_FLAG_HIDDEN);
+}
+
+esp_timer_stop(notification_timer_);
+ESP_ERROR_CHECK(esp_timer_start_once(notification_timer_, duration_ms * 1000));
 }
 
 void LvglDisplay::UpdateStatusBar(bool update_all) {
     auto& app = Application::GetInstance();
     auto& board = Board::GetInstance();
     auto codec = board.GetAudioCodec();
-    
 
     // Update mute icon
     {
@@ -196,14 +225,18 @@ void LvglDisplay::UpdateStatusBar(bool update_all) {
         }
     }
 }
-
     bool show_idle_info = false;
-    if (app.GetDeviceState() == kDeviceStateIdle && status_label_ != nullptr) {
-        const char* status_text = lv_label_get_text(status_label_);
-        if (status_text != nullptr && strchr(status_text, ':') != nullptr) {
-            show_idle_info = true;
-        }
+if (app.GetDeviceState() == kDeviceStateIdle &&
+    status_label_ != nullptr &&
+    notification_label_ != nullptr &&
+    lv_obj_has_flag(notification_label_, LV_OBJ_FLAG_HIDDEN) &&
+    !lv_obj_has_flag(status_label_, LV_OBJ_FLAG_HIDDEN)) {
+
+    const char* status_text = lv_label_get_text(status_label_);
+    if (status_text != nullptr && strchr(status_text, ':') != nullptr) {
+        show_idle_info = true;
     }
+}
     if (idle_metrics_container_ != nullptr) {
     if (show_idle_info) {
         lv_obj_remove_flag(idle_metrics_container_, LV_OBJ_FLAG_HIDDEN);

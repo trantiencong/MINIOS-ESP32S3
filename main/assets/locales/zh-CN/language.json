@@ -23,7 +23,7 @@
         "CONNECTING": "",
         "CONNECTED_TO": "Đã kết nối ",
         "LISTENING": "Đang lắng nghe...",
-        "SPEAKING": "Đang nói...",
+        "SPEAKING": "",
         "SERVER_NOT_FOUND": "Đang tìm dịch vụ khả dụng",
         "SERVER_NOT_CONNECTED": "Không thể kết nối máy chủ, vui lòng thử lại sau",
         "SERVER_TIMEOUT": "Chờ phản hồi quá thời gian",
