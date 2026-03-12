@@ -441,7 +441,9 @@ void LcdDisplay::SetupUI() {
     notification_label_ = lv_label_create(status_bar_);
     lv_obj_set_width(notification_label_, LV_HOR_RES * 0.8);
     lv_obj_set_style_text_align(notification_label_, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_font(notification_label_, &BUILTIN_TEXT_FONT, 0);
     lv_obj_set_style_text_color(notification_label_, lvgl_theme->text_color(), 0);
+    lv_obj_set_style_text_opa(notification_label_, LV_OPA_COVER, 0);
     lv_label_set_text(notification_label_, "");
     lv_obj_align(notification_label_, LV_ALIGN_CENTER, 0, 0);
     lv_obj_add_flag(notification_label_, LV_OBJ_FLAG_HIDDEN);
@@ -450,7 +452,9 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_width(status_label_, LV_HOR_RES * 0.8);
     lv_label_set_long_mode(status_label_, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_set_style_text_align(status_label_, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_font(status_label_, &BUILTIN_TEXT_FONT, 0);
     lv_obj_set_style_text_color(status_label_, lvgl_theme->text_color(), 0);
+    lv_obj_set_style_text_opa(status_label_, LV_OPA_COVER, 0);
     lv_label_set_text(status_label_, Lang::Strings::INITIALIZING);
     lv_obj_align(status_label_, LV_ALIGN_CENTER, 0, 0);
     
@@ -823,6 +827,7 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_style_text_font(screen, text_font, 0);
     lv_obj_set_style_text_color(screen, lvgl_theme->text_color(), 0);
     lv_obj_set_style_bg_color(screen, lvgl_theme->background_color(), 0);
+    lv_obj_set_style_text_opa(screen, LV_OPA_COVER, 0);
 
     /* Container - used as background */
     container_ = lv_obj_create(screen);
@@ -931,6 +936,7 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_style_text_opa(status_label_, LV_OPA_COVER, 0);
     lv_label_set_text(status_label_, Lang::Strings::INITIALIZING);
     lv_obj_set_style_text_font(status_label_, &BUILTIN_TEXT_FONT, 0);
+    lv_obj_set_style_text_opa(notification_label_, LV_OPA_COVER, 0);
     lv_obj_align(status_label_, LV_ALIGN_CENTER, 0, 0);
     idle_location_label_ = lv_label_create(status_bar_);
     idle_metrics_container_ = lv_obj_create(status_bar_);
@@ -989,16 +995,16 @@ void LcdDisplay::SetupUI() {
     lv_obj_add_flag(idle_humidity_label_, LV_OBJ_FLAG_HIDDEN);
 
 #if CONFIG_USE_MULTILINE_CHAT_MESSAGE
-    /* Bottom bar - tall enough to grow upward close to topbar, but still anchored at bottom */
+    /* Bottom bar - high enough for long multiline text, but still below topbar */
     bottom_bar_ = lv_obj_create(screen);
     lv_obj_set_width(bottom_bar_, LV_HOR_RES);
     lv_obj_set_height(bottom_bar_, LV_VER_RES - 44);
     lv_obj_set_style_radius(bottom_bar_, 0, 0);
     lv_obj_set_style_bg_color(bottom_bar_, lvgl_theme->background_color(), 0);
-    lv_obj_set_style_bg_opa(bottom_bar_, LV_OPA_50, 0);
+    lv_obj_set_style_bg_opa(bottom_bar_, LV_OPA_TRANSP, 0);
     lv_obj_set_style_text_color(bottom_bar_, lvgl_theme->text_color(), 0);
-    lv_obj_set_style_pad_top(bottom_bar_, lvgl_theme->spacing(2), 0);
-    lv_obj_set_style_pad_bottom(bottom_bar_, lvgl_theme->spacing(2), 0);
+    lv_obj_set_style_pad_top(bottom_bar_, 0, 0);
+    lv_obj_set_style_pad_bottom(bottom_bar_, 0, 0);
     lv_obj_set_style_pad_left(bottom_bar_, lvgl_theme->spacing(4), 0);
     lv_obj_set_style_pad_right(bottom_bar_, lvgl_theme->spacing(4), 0);
     lv_obj_set_style_border_width(bottom_bar_, 0, 0);
@@ -1012,7 +1018,7 @@ void LcdDisplay::SetupUI() {
     lv_label_set_long_mode(chat_message_label_, LV_LABEL_LONG_WRAP);
     lv_obj_set_style_text_align(chat_message_label_, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_color(chat_message_label_, lvgl_theme->text_color(), 0);
-    lv_obj_set_style_text_line_space(chat_message_label_, -2, 0);
+    lv_obj_set_style_text_line_space(chat_message_label_, -4, 0);
     lv_obj_align(chat_message_label_, LV_ALIGN_BOTTOM_MID, 0, 0);
     lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);  // Hide until there is content
 #else
