@@ -53,7 +53,6 @@ public:
     virtual void ClearChatMessages() override;
     virtual void SetPreviewImage(std::unique_ptr<LvglImage> image) override;
     virtual void SetupUI() override;
-    
     // Set whether to hide chat messages/subtitles
     void SetHideSubtitle(bool hide);
 };
