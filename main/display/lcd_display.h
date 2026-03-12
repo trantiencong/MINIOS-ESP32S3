@@ -46,13 +46,13 @@ protected:
     
 public:
     ~LcdDisplay();
+    virtual void SetStatus(const char* status) override;
+    virtual void SetTheme(Theme* theme) override;
     virtual void SetEmotion(const char* emotion) override;
     virtual void SetChatMessage(const char* role, const char* content) override;
     virtual void ClearChatMessages() override;
     virtual void SetPreviewImage(std::unique_ptr<LvglImage> image) override;
     virtual void SetupUI() override;
-    // Add theme switching function
-    virtual void SetTheme(Theme* theme) override;
     
     // Set whether to hide chat messages/subtitles
     void SetHideSubtitle(bool hide);

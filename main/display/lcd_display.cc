@@ -1103,6 +1103,29 @@ void LcdDisplay::SetPreviewImage(std::unique_ptr<LvglImage> image) {
     esp_timer_stop(preview_timer_);
     ESP_ERROR_CHECK(esp_timer_start_once(preview_timer_, PREVIEW_IMAGE_DURATION_MS * 1000));
 }
+void LcdDisplay::SetStatus(const char* status) {
+    LvglDisplay::SetStatus(status);
+
+    DisplayLockGuard lock(this);
+
+    bool is_clock_text = false;
+    if (status != nullptr && strchr(status, ':') != nullptr) {
+        is_clock_text = true;
+    }
+
+    if (bottom_bar_ != nullptr) {
+        if (is_clock_text) {
+            const char* text = (chat_message_label_ != nullptr) ? lv_label_get_text(chat_message_label_) : nullptr;
+            if (!hide_subtitle_ && text != nullptr && text[0] != '\0') {
+                lv_obj_remove_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
+            } else {
+                lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
+            }
+        } else {
+            lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+}
 
 void LcdDisplay::SetChatMessage(const char* role, const char* content) {
     if (!setup_ui_called_) {
