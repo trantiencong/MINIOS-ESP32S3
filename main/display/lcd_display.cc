@@ -1103,6 +1103,26 @@ void LcdDisplay::SetPreviewImage(std::unique_ptr<LvglImage> image) {
     esp_timer_stop(preview_timer_);
     ESP_ERROR_CHECK(esp_timer_start_once(preview_timer_, PREVIEW_IMAGE_DURATION_MS * 1000));
 }
+void LcdDisplay::HideIdleWeatherNow() {
+    if (idle_location_label_ != nullptr) {
+        lv_obj_add_flag(idle_location_label_, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (idle_metrics_container_ != nullptr) {
+        lv_obj_add_flag(idle_metrics_container_, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (idle_weather_icon_label_ != nullptr) {
+        lv_obj_add_flag(idle_weather_icon_label_, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (idle_temp_label_ != nullptr) {
+        lv_obj_add_flag(idle_temp_label_, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (idle_temp_icon_label_ != nullptr) {
+        lv_obj_add_flag(idle_temp_icon_label_, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (idle_humidity_label_ != nullptr) {
+        lv_obj_add_flag(idle_humidity_label_, LV_OBJ_FLAG_HIDDEN);
+    }
+}
 void LcdDisplay::SetStatus(const char* status) {
     LvglDisplay::SetStatus(status);
 
@@ -1112,6 +1132,23 @@ void LcdDisplay::SetStatus(const char* status) {
     if (status != nullptr && strchr(status, ':') != nullptr) {
         is_clock_text = true;
     }
+
+    // Không phải đồng hồ -> chuyển sang trạng thái giao tiếp
+    // Dọn ngay idle/weather trước khi frame mới vẽ
+    if (!is_clock_text) {
+        HideIdleWeatherNow();
+    }
+
+    if (status_label_ != nullptr) {
+        lv_obj_clear_flag(status_label_, LV_OBJ_FLAG_HIDDEN);
+        lv_label_set_text(status_label_, status ? status : "");
+    }
+
+    // ép layout update ngay, tránh 1 frame chồng chữ
+    if (status_bar_ != nullptr) {
+        lv_obj_update_layout(status_bar_);
+    }
+    lv_refr_now(nullptr);
 
     if (bottom_bar_ != nullptr) {
         if (is_clock_text) {
@@ -1139,7 +1176,7 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
         return;
     }
     if (content && content[0] == '%') {
-    content = "Đang nghĩ...";
+        content = "Đang nghĩ...";
 }
 
 lv_label_set_text(chat_message_label_, content);

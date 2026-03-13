@@ -62,16 +62,20 @@ void Application::Initialize() {
     auto& board = Board::GetInstance();
     SetDeviceState(kDeviceStateStarting);
 
-    // Setup the display
     auto display = board.GetDisplay();
     display->SetupUI();
-    // Print board name/version info
-    display->SetChatMessage("system", SystemInfo::GetUserAgent().c_str());
 
-    // Setup the audio service
+    // Bước 1: chỉ hiện màn khởi động đầu tiên
+    display->SetStatus("Khởi động MiniOS...");
+    display->SetChatMessage("system", "");
+    vTaskDelay(pdMS_TO_TICKS(1200));
+
+    // Bước 2: nạp audio
+    display->SetStatus("Đang khởi tạo âm thanh...");
     auto codec = board.GetAudioCodec();
     audio_service_.Initialize(codec);
     audio_service_.Start();
+    vTaskDelay(pdMS_TO_TICKS(700));
 
     AudioServiceCallbacks callbacks;
     callbacks.on_send_queue_available = [this]() {
@@ -85,23 +89,22 @@ void Application::Initialize() {
     };
     audio_service_.SetCallbacks(callbacks);
 
-    // Add state change listeners
+    // Bước 3: nạp dịch vụ hệ thống
+    display->SetStatus("Đang chuẩn bị hệ thống...");
     state_machine_.AddStateChangeListener([this](DeviceState old_state, DeviceState new_state) {
         xEventGroupSetBits(event_group_, MAIN_EVENT_STATE_CHANGED);
     });
-
-    // Start the clock timer to update the status bar
     esp_timer_start_periodic(clock_timer_handle_, 1000000);
 
-    // Add MCP common tools (only once during initialization)
     auto& mcp_server = McpServer::GetInstance();
     mcp_server.AddCommonTools();
     mcp_server.AddUserOnlyTools();
+    vTaskDelay(pdMS_TO_TICKS(700));
 
-    // Set network event callback for UI updates and network state handling
+    // callback mạng giữ nguyên
     board.SetNetworkEventCallback([this](NetworkEvent event, const std::string& data) {
         auto display = Board::GetInstance().GetDisplay();
-        
+
         switch (event) {
             case NetworkEvent::Scanning:
                 display->ShowNotification(Lang::Strings::SCANNING_WIFI, 30000);
@@ -109,10 +112,8 @@ void Application::Initialize() {
                 break;
             case NetworkEvent::Connecting: {
                 if (data.empty()) {
-                    // Cellular network - registering without carrier info yet
                     display->SetStatus(Lang::Strings::REGISTERING_NETWORK);
                 } else {
-                    // WiFi or cellular with carrier info
                     std::string msg = Lang::Strings::CONNECT_TO;
                     msg += data;
                     msg += "...";
@@ -131,12 +132,9 @@ void Application::Initialize() {
                 xEventGroupSetBits(event_group_, MAIN_EVENT_NETWORK_DISCONNECTED);
                 break;
             case NetworkEvent::WifiConfigModeEnter:
-                // WiFi config mode enter is handled by WifiBoard internally
                 break;
             case NetworkEvent::WifiConfigModeExit:
-                // WiFi config mode exit is handled by WifiBoard internally
                 break;
-            // Cellular modem specific events
             case NetworkEvent::ModemDetecting:
                 display->SetStatus(Lang::Strings::DETECTING_MODULE);
                 break;
@@ -155,10 +153,10 @@ void Application::Initialize() {
         }
     });
 
-    // Start network asynchronously
+    // Bước 4: bắt đầu mạng sau cùng
+    display->SetStatus("Đang kết nối mạng...");
+    vTaskDelay(pdMS_TO_TICKS(700));
     board.StartNetwork();
-
-    // Update the status bar immediately to show the network state
     display->UpdateStatusBar(true);
 }
 
@@ -304,7 +302,7 @@ void Application::HandleActivationDoneEvent() {
     has_server_time_ = ota_->HasServerTime();
 
     auto display = Board::GetInstance().GetDisplay();
-    display->SetChatMessage("system", "");
+    display->SetChatMessage("system", SystemInfo::GetUserAgent().c_str());
 
     SetDeviceState(kDeviceStateIdle);
     display->UpdateStatusBar(true);
@@ -589,7 +587,7 @@ void Application::InitializeProtocol() {
             } else {
                 ESP_LOGW(TAG, "Alert command requires status, message and emotion");
             }
-#if CONFIG_RECEIVE_CUSTOM_MESSAGE
+    #if CONFIG_RECEIVE_CUSTOM_MESSAGE
         } else if (strcmp(type->valuestring, "custom") == 0) {
             auto payload = cJSON_GetObjectItem(root, "payload");
             ESP_LOGI(TAG, "Received custom message: %s", cJSON_PrintUnformatted(root));
@@ -600,7 +598,7 @@ void Application::InitializeProtocol() {
             } else {
                 ESP_LOGW(TAG, "Invalid custom message format: missing payload");
             }
-#endif
+    #endif
         } else {
             ESP_LOGW(TAG, "Unknown message type: %s", type->valuestring);
         }
@@ -874,7 +872,7 @@ void Application::HandleStateChangedEvent() {
         case kDeviceStateConnecting:
             display->SetStatus(Lang::Strings::CONNECTING);
             display->SetEmotion("neutral");
-            display->SetChatMessage("system", "");
+            display->SetChatMessage("system", SystemInfo::GetUserAgent().c_str());
             break;
         case kDeviceStateListening:
             display->SetStatus(Lang::Strings::LISTENING);
