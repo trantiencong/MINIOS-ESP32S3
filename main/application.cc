@@ -90,7 +90,7 @@ void Application::Initialize() {
     audio_service_.SetCallbacks(callbacks);
 
     // Bước 3: nạp dịch vụ hệ thống
-    display->SetStatus("Đang chuẩn bị hệ thống...");
+    display->SetStatus("Kiểm tra hệ thống...");
     state_machine_.AddStateChangeListener([this](DeviceState old_state, DeviceState new_state) {
         xEventGroupSetBits(event_group_, MAIN_EVENT_STATE_CHANGED);
     });
@@ -154,8 +154,6 @@ void Application::Initialize() {
     });
 
     // Bước 4: bắt đầu mạng sau cùng
-    display->SetStatus("Đang kết nối mạng...");
-    vTaskDelay(pdMS_TO_TICKS(700));
     board.StartNetwork();
     display->UpdateStatusBar(true);
 }
