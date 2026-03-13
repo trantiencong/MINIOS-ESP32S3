@@ -16,13 +16,12 @@
 #include <driver/gpio.h>
 #include <arpa/inet.h>
 #include <font_awesome.h>
-
 #define TAG "Application"
 
 
 Application::Application() {
     event_group_ = xEventGroupCreate();
-
+    
 #if CONFIG_USE_DEVICE_AEC && CONFIG_USE_SERVER_AEC
 #error "CONFIG_USE_DEVICE_AEC and CONFIG_USE_SERVER_AEC cannot be enabled at the same time"
 #elif CONFIG_USE_DEVICE_AEC
@@ -65,33 +64,29 @@ void Application::Initialize() {
     auto display = board.GetDisplay();
     display->SetupUI();
 
-    // Bước 1: chỉ hiện màn khởi động đầu tiên
+    // Chỉ giữ màn khởi động đầu tiên
     display->SetStatus("Khởi động MiniOS...");
     display->SetChatMessage("system", "");
     vTaskDelay(pdMS_TO_TICKS(1200));
 
-    // Bước 2: nạp audio
-    display->SetStatus("Đang khởi tạo âm thanh...");
+    // Khởi tạo thật, nhưng không hiện step text thừa
     auto codec = board.GetAudioCodec();
     audio_service_.Initialize(codec);
     audio_service_.Start();
-    vTaskDelay(pdMS_TO_TICKS(700));
 
     AudioServiceCallbacks callbacks;
     callbacks.on_send_queue_available = [this]() {
         xEventGroupSetBits(event_group_, MAIN_EVENT_SEND_AUDIO);
     };
-    callbacks.on_wake_word_detected = [this](const std::string& wake_word) {
+    callbacks.on_wake_word_detected = [this](const std::string&) {
         xEventGroupSetBits(event_group_, MAIN_EVENT_WAKE_WORD_DETECTED);
     };
-    callbacks.on_vad_change = [this](bool speaking) {
+    callbacks.on_vad_change = [this](bool) {
         xEventGroupSetBits(event_group_, MAIN_EVENT_VAD_CHANGE);
     };
     audio_service_.SetCallbacks(callbacks);
 
-    // Bước 3: nạp dịch vụ hệ thống
-    display->SetStatus("Kiểm tra hệ thống...");
-    state_machine_.AddStateChangeListener([this](DeviceState old_state, DeviceState new_state) {
+    state_machine_.AddStateChangeListener([this](DeviceState, DeviceState) {
         xEventGroupSetBits(event_group_, MAIN_EVENT_STATE_CHANGED);
     });
     esp_timer_start_periodic(clock_timer_handle_, 1000000);
@@ -99,9 +94,7 @@ void Application::Initialize() {
     auto& mcp_server = McpServer::GetInstance();
     mcp_server.AddCommonTools();
     mcp_server.AddUserOnlyTools();
-    vTaskDelay(pdMS_TO_TICKS(700));
 
-    // callback mạng giữ nguyên
     board.SetNetworkEventCallback([this](NetworkEvent event, const std::string& data) {
         auto display = Board::GetInstance().GetDisplay();
 
@@ -116,7 +109,7 @@ void Application::Initialize() {
                 } else {
                     std::string msg = Lang::Strings::CONNECT_TO;
                     msg += data;
-                    msg += "...";
+                    msg += ".";
                     display->ShowNotification(msg.c_str(), 30000);
                 }
                 break;
@@ -153,7 +146,6 @@ void Application::Initialize() {
         }
     });
 
-    // Bước 4: bắt đầu mạng sau cùng
     board.StartNetwork();
     display->UpdateStatusBar(true);
 }
@@ -300,7 +292,8 @@ void Application::HandleActivationDoneEvent() {
     has_server_time_ = ota_->HasServerTime();
 
     auto display = Board::GetInstance().GetDisplay();
-    display->SetChatMessage("system", SystemInfo::GetUserAgent().c_str());
+    display->SetChatMessage("system", "");
+    
 
     SetDeviceState(kDeviceStateIdle);
     display->UpdateStatusBar(true);
@@ -400,6 +393,7 @@ void Application::CheckNewVersion() {
     while (true) {
         auto display = board.GetDisplay();
         display->SetStatus(Lang::Strings::CHECKING_NEW_VERSION);
+        display->SetChatMessage("system", SystemInfo::GetUserAgent().c_str());
 
         esp_err_t err = ota_->CheckVersion();
         if (err != ESP_OK) {
@@ -1162,4 +1156,3 @@ void Application::ResetProtocol() {
         protocol_.reset();
     });
 }
-
