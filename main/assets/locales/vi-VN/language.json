@@ -7,7 +7,7 @@
         "INFO": "Thông tin",
         "ERROR": "Lỗi",
         "VERSION": "Phiên bản ",
-        "LOADING_PROTOCOL": "Kết nối MiniOS...",
+        "LOADING_PROTOCOL": "Kết nối MiniOS",
         "INITIALIZING": "Khởi động MiniOS...",
         "PIN_ERROR": "Vui lòng cắm thẻ SIM",
         "REG_ERROR": "Không thể truy cập mạng, vui lòng kiểm tra trạng thái thẻ SIM",

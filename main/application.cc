@@ -65,7 +65,7 @@ void Application::Initialize() {
     display->SetupUI();
 
     // Chỉ giữ màn khởi động đầu tiên
-    display->SetStatus("Khởi động MiniOS...");
+    display->SetStatus("Khởi động MiniOS");
     display->SetChatMessage("system", "");
     vTaskDelay(pdMS_TO_TICKS(1200));
 
@@ -394,7 +394,6 @@ void Application::CheckNewVersion() {
         auto display = board.GetDisplay();
         display->SetStatus(Lang::Strings::CHECKING_NEW_VERSION);
         display->SetChatMessage("system", SystemInfo::GetUserAgent().c_str());
-
         esp_err_t err = ota_->CheckVersion();
         if (err != ESP_OK) {
             retry_count++;
