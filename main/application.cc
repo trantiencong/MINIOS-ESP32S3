@@ -872,7 +872,7 @@ void Application::HandleStateChangedEvent() {
         case kDeviceStateConnecting:
             display->SetStatus(Lang::Strings::CONNECTING);
             display->SetEmotion("neutral");
-            display->SetChatMessage("system", SystemInfo::GetUserAgent().c_str());
+            display->SetChatMessage("system", "");
             break;
         case kDeviceStateListening:
             display->SetStatus(Lang::Strings::LISTENING);
