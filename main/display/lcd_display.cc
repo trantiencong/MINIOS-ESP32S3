@@ -24,7 +24,7 @@ LV_FONT_DECLARE(font_awesome_30_4);
 LV_FONT_DECLARE(font_noto_vi_20_4);
 
 void LcdDisplay::InitializeLcdThemes() {
-    auto text_font = std::make_shared<LvglBuiltInFont>(&BUILTIN_TEXT_FONT);
+    auto text_font = std::make_shared<LvglBuiltInFont>(&font_noto_vi_20_4);
     auto icon_font = std::make_shared<LvglBuiltInFont>(&BUILTIN_ICON_FONT);
     auto large_icon_font = std::make_shared<LvglBuiltInFont>(&font_awesome_30_4);
 
@@ -441,8 +441,8 @@ void LcdDisplay::SetupUI() {
     notification_label_ = lv_label_create(status_bar_);
     lv_obj_set_width(notification_label_, LV_HOR_RES * 0.8);
     lv_obj_set_style_text_align(notification_label_, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_style_text_font(notification_label_, &BUILTIN_TEXT_FONT, 0);
-    lv_obj_set_style_text_color(notification_label_, lvgl_theme->text_color(), 0);
+    lv_obj_set_style_text_font(notification_label_, &font_noto_vi_20_4, 0);
+    lv_obj_set_style_text_font(status_label_, &font_noto_vi_20_4, 0);
     lv_obj_set_style_text_opa(notification_label_, LV_OPA_COVER, 0);
     lv_label_set_text(notification_label_, "");
     lv_obj_align(notification_label_, LV_ALIGN_CENTER, 0, 0);
@@ -1411,14 +1411,28 @@ void LcdDisplay::SetTheme(Theme* theme) {
         }
     }
 #else
-        // Simple UI mode - just update the main chat message
-        if (chat_message_label_ != nullptr) {
+    // Simple UI mode
+    if (status_label_ != nullptr) {
+        lv_obj_set_style_text_color(status_label_, lvgl_theme->text_color(), 0);
+        lv_obj_set_style_text_font(status_label_, &font_noto_vi_20_4, 0);
+        lv_obj_set_style_text_opa(status_label_, LV_OPA_COVER, 0);
+    }
+
+    if (notification_label_ != nullptr) {
+        lv_obj_set_style_text_color(notification_label_, lvgl_theme->text_color(), 0);
+        lv_obj_set_style_text_font(notification_label_, &font_noto_vi_20_4, 0);
+        lv_obj_set_style_text_opa(notification_label_, LV_OPA_COVER, 0);
+    }
+
+    if (chat_message_label_ != nullptr) {
         lv_obj_set_style_text_color(chat_message_label_, lvgl_theme->text_color(), 0);
+        lv_obj_set_style_text_font(chat_message_label_, &font_noto_vi_20_4, 0);
+        lv_obj_set_style_text_opa(chat_message_label_, LV_OPA_COVER, 0);
     }
 
     if (idle_location_label_ != nullptr) {
-    lv_obj_set_style_text_color(idle_location_label_, lvgl_theme->text_color(), 0);
-    lv_obj_set_style_text_font(idle_location_label_, &font_noto_vi_20_4, 0);
+        lv_obj_set_style_text_color(idle_location_label_, lvgl_theme->text_color(), 0);
+        lv_obj_set_style_text_font(idle_location_label_, &font_noto_vi_20_4, 0);
     }
     if (idle_weather_icon_label_ != nullptr) {
         lv_obj_set_style_text_color(idle_weather_icon_label_, lvgl_theme->text_color(), 0);
@@ -1437,13 +1451,13 @@ void LcdDisplay::SetTheme(Theme* theme) {
         lv_obj_set_style_text_font(idle_temp_label_, &font_noto_vi_20_4, 0);
     }
     if (idle_humidity_label_ != nullptr) {
-    lv_obj_set_style_text_color(idle_humidity_label_, lvgl_theme->text_color(), 0);
-    lv_obj_set_style_text_font(idle_humidity_label_, &font_noto_vi_20_4, 0);
+        lv_obj_set_style_text_color(idle_humidity_label_, lvgl_theme->text_color(), 0);
+        lv_obj_set_style_text_font(idle_humidity_label_, &font_noto_vi_20_4, 0);
     }
     if (emoji_label_ != nullptr) {
         lv_obj_set_style_text_color(emoji_label_, lvgl_theme->text_color(), 0);
     }
-    
+
     // Update bottom bar background color with 50% opacity
     if (bottom_bar_ != nullptr) {
         lv_obj_set_style_bg_opa(bottom_bar_, LV_OPA_50, 0);
