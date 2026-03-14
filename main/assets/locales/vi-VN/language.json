@@ -5,7 +5,7 @@
     "strings": {
         "WARNING": "Cảnh báo",
         "INFO": "Thông tin",
-        "ERROR": "Lỗi",
+        "ERROR": "Không thể kết nối đến máy chủ",
         "VERSION": "Phiên bản ",
         "LOADING_PROTOCOL": "Kết nối MiniOS",
         "INITIALIZING": "Khởi động MiniOS",

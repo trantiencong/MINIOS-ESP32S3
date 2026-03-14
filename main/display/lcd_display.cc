@@ -404,7 +404,6 @@ void LcdDisplay::SetupUI() {
     lv_label_set_text(network_label_, "");
     lv_obj_set_style_text_font(network_label_, icon_font, 0);
     lv_obj_set_style_text_color(network_label_, lvgl_theme->text_color(), 0);
-    
 
     // Right icons container
     lv_obj_t* right_icons = lv_obj_create(top_bar_);
@@ -1022,8 +1021,8 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_style_text_color(chat_message_label_, lvgl_theme->text_color(), 0);
     lv_obj_set_style_text_font(chat_message_label_, &font_noto_vi_20_4, 0);
     lv_obj_set_style_text_opa(chat_message_label_, LV_OPA_COVER, 0);    
-    lv_obj_set_style_text_line_space(chat_message_label_, -4, 0);
-    lv_obj_align(chat_message_label_, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_set_style_text_line_space(chat_message_label_, 2, 0);
+    lv_obj_align(chat_message_label_, LV_ALIGN_BOTTOM_MID, 0, -10);
     lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);  // Hide until there is content
 #else
     /* Top layer: Bottom bar - fixed height at bottom */
