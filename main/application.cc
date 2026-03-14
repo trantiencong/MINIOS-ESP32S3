@@ -66,8 +66,9 @@ void Application::Initialize() {
 
     // Chỉ giữ màn khởi động đầu tiên
     display->SetStatus("Khởi động MiniOS");
-    display->SetChatMessage("system", "");
+    display->SetChatMessage("system", SystemInfo::GetUserAgent().c_str());
     vTaskDelay(pdMS_TO_TICKS(1200));
+    
 
     // Khởi tạo thật, nhưng không hiện step text thừa
     auto codec = board.GetAudioCodec();
@@ -392,8 +393,8 @@ void Application::CheckNewVersion() {
     auto& board = Board::GetInstance();
     while (true) {
         auto display = board.GetDisplay();
+        display->SetChatMessage("system", "");
         display->SetStatus(Lang::Strings::CHECKING_NEW_VERSION);
-        display->SetChatMessage("system", SystemInfo::GetUserAgent().c_str());
         esp_err_t err = ota_->CheckVersion();
         if (err != ESP_OK) {
             retry_count++;

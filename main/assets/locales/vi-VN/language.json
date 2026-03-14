@@ -12,7 +12,7 @@
         "PIN_ERROR": "Vui lòng cắm thẻ SIM",
         "REG_ERROR": "Không thể truy cập mạng, vui lòng kiểm tra trạng thái thẻ SIM",
         "DETECTING_MODULE": "Phát hiện module...",
-        "REGISTERING_NETWORK": "Đang chờ mạng...",
+        "REGISTERING_NETWORK": "Đang quét Wifi...",
         "CHECKING_NEW_VERSION": "Kiểm tra phiên bản mới...",
         "CHECK_NEW_VERSION_FAILED": "Kiểm tra phiên bản mới thất bại, sẽ thử lại sau %d giây: %s",
         "SWITCH_TO_WIFI_NETWORK": "Đang chuyển sang Wi-Fi...",
