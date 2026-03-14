@@ -404,6 +404,7 @@ void LcdDisplay::SetupUI() {
     lv_label_set_text(network_label_, "");
     lv_obj_set_style_text_font(network_label_, icon_font, 0);
     lv_obj_set_style_text_color(network_label_, lvgl_theme->text_color(), 0);
+    
 
     // Right icons container
     lv_obj_t* right_icons = lv_obj_create(top_bar_);
@@ -842,17 +843,16 @@ void LcdDisplay::SetupUI() {
     emoji_box_ = lv_obj_create(screen);
     lv_obj_set_size(emoji_box_, 80, 80);
     lv_obj_set_style_radius(emoji_box_, LV_RADIUS_CIRCLE, 0);
-    /* Siri listening animation circle */
     lv_obj_set_style_bg_color(emoji_box_, lv_color_hex(0x3B82F6), 0);
     lv_obj_set_style_bg_opa(emoji_box_, LV_OPA_80, 0);
-    lv_obj_align(emoji_box_, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_set_style_bg_color(emoji_box_, lv_color_hex(0x3B82F6), 0);
-    lv_obj_set_style_bg_opa(emoji_box_, LV_OPA_80, 0);
-
     lv_obj_align(emoji_box_, LV_ALIGN_CENTER, 0, 0);
     lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
 
     emoji_label_ = lv_label_create(emoji_box_);
+    lv_obj_set_style_text_font(emoji_label_, &font_awesome_30_4, 0);
+    lv_obj_set_style_text_color(emoji_label_, lvgl_theme->text_color(), 0);
+    lv_obj_set_style_text_opa(emoji_label_, LV_OPA_COVER, 0);
+    lv_obj_center(emoji_label_);
     lv_obj_add_flag(emoji_label_, LV_OBJ_FLAG_HIDDEN);
 
     emoji_image_ = lv_img_create(emoji_box_);
@@ -883,7 +883,7 @@ void LcdDisplay::SetupUI() {
 
     // Left icon
     network_label_ = lv_label_create(top_bar_);
-    lv_label_set_text(network_label_, "MiniOS");
+    lv_label_set_text(network_label_, "");
     lv_obj_set_style_text_font(network_label_, icon_font, 0);
     lv_obj_set_style_text_color(network_label_, lvgl_theme->text_color(), 0);
 
@@ -922,8 +922,11 @@ void LcdDisplay::SetupUI() {
 
     notification_label_ = lv_label_create(status_bar_);
     lv_obj_set_width(notification_label_, LV_HOR_RES * 0.75);
+    lv_label_set_long_mode(notification_label_, LV_LABEL_LONG_WRAP);
     lv_obj_set_style_text_align(notification_label_, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_font(notification_label_, &font_noto_vi_20_4, 0);
     lv_obj_set_style_text_color(notification_label_, lvgl_theme->text_color(), 0);
+    lv_obj_set_style_text_opa(notification_label_, LV_OPA_COVER, 0);
     lv_label_set_text(notification_label_, "");
     lv_obj_align(notification_label_, LV_ALIGN_CENTER, 0, 0);
     lv_obj_add_flag(notification_label_, LV_OBJ_FLAG_HIDDEN);
@@ -932,11 +935,10 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_width(status_label_, LV_HOR_RES * 0.75);
     lv_label_set_long_mode(status_label_, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_set_style_text_align(status_label_, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_font(status_label_, &font_noto_vi_20_4, 0);
     lv_obj_set_style_text_color(status_label_, lvgl_theme->text_color(), 0);
     lv_obj_set_style_text_opa(status_label_, LV_OPA_COVER, 0);
     lv_label_set_text(status_label_, Lang::Strings::INITIALIZING);
-    lv_obj_set_style_text_font(status_label_, &BUILTIN_TEXT_FONT, 0);
-    lv_obj_set_style_text_opa(notification_label_, LV_OPA_COVER, 0);
     lv_obj_align(status_label_, LV_ALIGN_CENTER, 0, 0);
     idle_location_label_ = lv_label_create(status_bar_);
     idle_metrics_container_ = lv_obj_create(status_bar_);
@@ -1018,6 +1020,8 @@ void LcdDisplay::SetupUI() {
     lv_label_set_long_mode(chat_message_label_, LV_LABEL_LONG_WRAP);
     lv_obj_set_style_text_align(chat_message_label_, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_color(chat_message_label_, lvgl_theme->text_color(), 0);
+    lv_obj_set_style_text_font(chat_message_label_, &font_noto_vi_20_4, 0);
+    lv_obj_set_style_text_opa(chat_message_label_, LV_OPA_COVER, 0);    
     lv_obj_set_style_text_line_space(chat_message_label_, -4, 0);
     lv_obj_align(chat_message_label_, LV_ALIGN_BOTTOM_MID, 0, 0);
     lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);  // Hide until there is content
@@ -1039,6 +1043,8 @@ void LcdDisplay::SetupUI() {
     chat_message_label_ = lv_label_create(bottom_bar_);
     lv_label_set_text(chat_message_label_, "");
     lv_obj_set_width(chat_message_label_, LV_HOR_RES - lvgl_theme->spacing(8));
+    lv_obj_set_style_text_font(chat_message_label_, &font_noto_vi_20_4, 0);
+    lv_obj_set_style_text_opa(chat_message_label_, LV_OPA_COVER, 0);
     lv_label_set_long_mode(chat_message_label_, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_set_style_text_align(chat_message_label_, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_color(chat_message_label_, lvgl_theme->text_color(), 0);
@@ -1179,7 +1185,7 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
         content = "Đang nghĩ...";
 }
 
-lv_label_set_text(chat_message_label_, content);
+    lv_label_set_text(chat_message_label_, content);
     // Show bottom_bar_ only when there is content (and subtitle is not globally hidden)
     if (bottom_bar_ != nullptr) {
         if (content == nullptr || content[0] == '\0') {
