@@ -463,7 +463,7 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_flex_grow(content_, 1);
     lv_obj_set_style_pad_all(content_, profile.content_pad_all, 0);
     lv_obj_set_style_pad_top(content_, profile.content_pad_top, 0);
-    
+    lv_obj_set_style_pad_top(content_, 20, 0);
     lv_obj_set_style_border_width(content_, 0, 0);
     lv_obj_set_style_bg_color(content_, lvgl_theme->chat_background_color(), 0); // Background for chat area
 
@@ -895,13 +895,6 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_flex_flow(right_icons, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(right_icons, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-    emotion_topbar_label_ = lv_label_create(right_icons);
-    lv_label_set_text(emotion_topbar_label_, "");
-    lv_obj_set_style_text_font(emotion_topbar_label_, icon_font, 0);
-    lv_obj_set_style_text_color(emotion_topbar_label_, lvgl_theme->text_color(), 0);
-    lv_obj_set_style_margin_left(emotion_topbar_label_, lvgl_theme->spacing(2), 0);
-    lv_obj_add_flag(emotion_topbar_label_, LV_OBJ_FLAG_HIDDEN);
-
     mute_label_ = lv_label_create(right_icons);
     lv_label_set_text(mute_label_, "");
     lv_obj_set_style_text_font(mute_label_, icon_font, 0);
@@ -963,7 +956,7 @@ void LcdDisplay::SetupUI() {
     lv_label_set_long_mode(idle_location_label_, LV_LABEL_LONG_WRAP);
     lv_obj_set_style_text_align(idle_location_label_, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_color(idle_location_label_, lvgl_theme->text_color(), 0);
-    lv_label_set_text(idle_location_label_, "Weather at Home");
+    lv_label_set_text(idle_location_label_, "Quy Nhon");
     lv_obj_align(idle_location_label_, LV_ALIGN_CENTER, 0, profile.idle_location_offset_y);
     lv_obj_add_flag(idle_location_label_, LV_OBJ_FLAG_HIDDEN);
 
@@ -1021,8 +1014,7 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_style_text_color(chat_message_label_, lvgl_theme->text_color(), 0);
     lv_obj_set_style_text_line_space(chat_message_label_, -4, 0);
     lv_obj_align(chat_message_label_, LV_ALIGN_BOTTOM_MID, 0, 0);
-    lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN); 
-    lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN); // Hide until there is content
+    lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);  // Hide until there is content
 #else
     /* Top layer: Bottom bar - fixed height at bottom */
     bottom_bar_ = lv_obj_create(screen);
@@ -1134,11 +1126,7 @@ void LcdDisplay::SetStatus(const char* status) {
     if (status != nullptr && strchr(status, ':') != nullptr) {
         is_clock_text = true;
     }
-    if (emoji_box_ != nullptr) {
-        if (is_clock_text) {
-            lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
-        }
-    }
+
     // Không phải đồng hồ -> chuyển sang trạng thái giao tiếp
     // Dọn ngay idle/weather trước khi frame mới vẽ
     if (!is_clock_text) {
@@ -1149,14 +1137,7 @@ void LcdDisplay::SetStatus(const char* status) {
         lv_obj_clear_flag(status_label_, LV_OBJ_FLAG_HIDDEN);
         lv_label_set_text(status_label_, status ? status : "");
     }
-#if CONFIG_USE_MULTILINE_CHAT_MESSAGE
-    if (status != nullptr && strchr(status, ':') != nullptr) {
-        if (emotion_topbar_label_ != nullptr) {
-            lv_label_set_text(emotion_topbar_label_, "");
-            lv_obj_add_flag(emotion_topbar_label_, LV_OBJ_FLAG_HIDDEN);
-        }
-    }
-#endif
+
     // ép layout update ngay, tránh 1 frame chồng chữ
     if (status_bar_ != nullptr) {
         lv_obj_update_layout(status_bar_);
@@ -1238,96 +1219,20 @@ void LcdDisplay::SetEmotion(const char* emotion) {
         return;
     }
 
-    
-#if CONFIG_USE_MULTILINE_CHAT_MESSAGE
-    if (strcmp(emotion, "neutral") == 0) {
-        if (emotion_topbar_label_ != nullptr) {
-            lv_label_set_text(emotion_topbar_label_, "");
-            lv_obj_add_flag(emotion_topbar_label_, LV_OBJ_FLAG_HIDDEN);
-        }
-        if (emoji_box_ != nullptr) {
-            lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
-        }
-        if (emoji_image_ != nullptr) {
-            lv_obj_add_flag(emoji_image_, LV_OBJ_FLAG_HIDDEN);
-        }
-        if (emoji_label_ != nullptr) {
-            lv_obj_add_flag(emoji_label_, LV_OBJ_FLAG_HIDDEN);
-        }
-        if (status_label_ != nullptr) {
-            lv_obj_remove_flag(status_label_, LV_OBJ_FLAG_HIDDEN);
-        }
-        return;
-    }
-
-    const char* utf8 = font_awesome_get_utf8(emotion);
-    if (emotion_topbar_label_ != nullptr) {
-        if (utf8 != nullptr) {
-            lv_label_set_text(emotion_topbar_label_, utf8);
-            lv_obj_remove_flag(emotion_topbar_label_, LV_OBJ_FLAG_HIDDEN);
-        } else {
-            lv_label_set_text(emotion_topbar_label_, FONT_AWESOME_MICROCHIP_AI);
-            lv_obj_remove_flag(emotion_topbar_label_, LV_OBJ_FLAG_HIDDEN);
-        }
-    }
-
-    if (emoji_box_ != nullptr) {
-        lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
-    }
-    if (emoji_image_ != nullptr) {
-        lv_obj_add_flag(emoji_image_, LV_OBJ_FLAG_HIDDEN);
-    }
-    if (emoji_label_ != nullptr) {
-        lv_obj_add_flag(emoji_label_, LV_OBJ_FLAG_HIDDEN);
-    }
-    if (status_label_ != nullptr) {
-        lv_obj_remove_flag(status_label_, LV_OBJ_FLAG_HIDDEN);
-    }
-    return;
-#endif
-
-if (strcmp(emotion, "neutral") == 0) {
-    if (gif_controller_) {
-        gif_controller_->Stop();
-        gif_controller_.reset();
-    }
-
-    if (emoji_box_ != nullptr) {
-        lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
-    }
-    if (emoji_image_ != nullptr) {
-        lv_obj_add_flag(emoji_image_, LV_OBJ_FLAG_HIDDEN);
-    }
-    if (emoji_label_ != nullptr) {
-        lv_obj_add_flag(emoji_label_, LV_OBJ_FLAG_HIDDEN);
-    }
-    if (status_label_ != nullptr) {
-        lv_obj_remove_flag(status_label_, LV_OBJ_FLAG_HIDDEN);
-    }
-    return;
-}
-
-auto emoji_collection = static_cast<LvglTheme*>(current_theme_)->emoji_collection();
+    auto emoji_collection = static_cast<LvglTheme*>(current_theme_)->emoji_collection();
     auto image = emoji_collection != nullptr ? emoji_collection->GetEmojiImage(emotion) : nullptr;
     if (image == nullptr) {
         const char* utf8 = font_awesome_get_utf8(emotion);
         if (utf8 != nullptr && emoji_label_ != nullptr) {
+            DisplayLockGuard lock(this);
             lv_label_set_text(emoji_label_, utf8);
             lv_obj_add_flag(emoji_image_, LV_OBJ_FLAG_HIDDEN);
             lv_obj_remove_flag(emoji_label_, LV_OBJ_FLAG_HIDDEN);
-            if (emoji_box_ != nullptr) {
-                lv_obj_remove_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
-            }
-            if (status_label_ != nullptr) {
-                lv_obj_add_flag(status_label_, LV_OBJ_FLAG_HIDDEN);
-            }
         }
         return;
     }
-    
-    if (emoji_box_ != nullptr) {
-    lv_obj_remove_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
-    }
+
+    DisplayLockGuard lock(this);
     if (image->IsGif()) {
         // Create new GIF controller
         gif_controller_ = std::make_unique<LvglGif>(image->image_dsc());
