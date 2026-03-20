@@ -1,35 +1,29 @@
-#include <esp_log.h>
 #include <esp_err.h>
-#include <string>
+#include <esp_log.h>
+#include <font_awesome.h>
 #include <cstdlib>
 #include <cstring>
-#include <font_awesome.h>
+#include <string>
 
-#include "display.h"
-#include "board.h"
 #include "application.h"
-#include "audio_codec.h"
-#include "settings.h"
 #include "assets/lang_config.h"
+#include "audio_codec.h"
+#include "board.h"
+#include "display.h"
+#include "settings.h"
 
 #define TAG "Display"
 
-Display::Display() {
-}
+Display::Display() {}
 
-Display::~Display() {
-}
+Display::~Display() {}
 
-void Display::SetStatus(const char* status) {
-    ESP_LOGW(TAG, "SetStatus: %s", status);
-}
+void Display::SetStatus(const char* status) { ESP_LOGW(TAG, "SetStatus: %s", status); }
 
-void Display::SetIdleInfo(const char* location, const char* weather, const char* temperature, const char* humidity) {
-    ESP_LOGW(TAG, "SetIdleInfo: %s | %s | %s | %s",
-        location ? location : "",
-        weather ? weather : "",
-        temperature ? temperature : "",
-        humidity ? humidity : "");
+void Display::SetIdleInfo(const char* location, const char* weather, const char* temperature,
+                          const char* humidity) {
+    ESP_LOGW(TAG, "SetIdleInfo: %s | %s | %s | %s", location ? location : "",
+             weather ? weather : "", temperature ? temperature : "", humidity ? humidity : "");
 }
 void Display::SetIdleWeatherIcon(const char* icon_text) {
     ESP_LOGW(TAG, "SetIdleWeatherIcon: %s", icon_text ? icon_text : "");
@@ -39,16 +33,13 @@ void Display::ShowNotification(const char* notification, int duration_ms) {
     ESP_LOGW(TAG, "ShowNotification: %s", notification);
 }
 
-void Display::ShowNotification(const std::string &notification, int duration_ms) {
+void Display::ShowNotification(const std::string& notification, int duration_ms) {
     ShowNotification(notification.c_str(), duration_ms);
 }
 
-void Display::UpdateStatusBar(bool update_all) {
-}
+void Display::UpdateStatusBar(bool update_all) {}
 
-void Display::SetEmotion(const char* emotion) {
-    ESP_LOGW(TAG, "SetEmotion: %s", emotion);
-}
+void Display::SetEmotion(const char* emotion) { ESP_LOGW(TAG, "SetEmotion: %s", emotion); }
 
 void Display::SetChatMessage(const char* role, const char* content) {
     ESP_LOGW(TAG, "Role:%s", role);
@@ -65,6 +56,4 @@ void Display::SetTheme(Theme* theme) {
     settings.SetString("theme", theme->name());
 }
 
-void Display::SetPowerSaveMode(bool on) {
-    ESP_LOGW(TAG, "SetPowerSaveMode: %d", on);
-}
+void Display::SetPowerSaveMode(bool on) { ESP_LOGW(TAG, "SetPowerSaveMode: %d", on); }

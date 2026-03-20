@@ -64,7 +64,7 @@ void Application::Initialize() {
     // Chỉ giữ màn khởi động đầu tiên
     display->SetStatus("Khởi động MiniOS");
     display->SetChatMessage("system", SystemInfo::GetUserAgent().c_str());
-    // vTaskDelay(pdMS_TO_TICKS(1200));
+    vTaskDelay(pdMS_TO_TICKS(800));
 
     // Khởi tạo thật, nhưng không hiện step text thừa
     auto codec = board.GetAudioCodec();
@@ -97,9 +97,10 @@ void Application::Initialize() {
 
         switch (event) {
             case NetworkEvent::Scanning:
-                display->ShowNotification(Lang::Strings::SCANNING_WIFI, 30000);
+                display->SetStatus(Lang::Strings::SCANNING_WIFI);
                 xEventGroupSetBits(event_group_, MAIN_EVENT_NETWORK_DISCONNECTED);
                 break;
+
             case NetworkEvent::Connecting: {
                 if (data.empty()) {
                     display->SetStatus(Lang::Strings::REGISTERING_NETWORK);
@@ -107,14 +108,15 @@ void Application::Initialize() {
                     std::string msg = Lang::Strings::CONNECT_TO;
                     msg += data;
                     msg += ".";
-                    display->ShowNotification(msg.c_str(), 30000);
+                    display->SetStatus(msg.c_str());
                 }
                 break;
             }
+
             case NetworkEvent::Connected: {
                 std::string msg = Lang::Strings::CONNECTED_TO;
                 msg += data;
-                display->ShowNotification(msg.c_str(), 30000);
+                display->SetStatus(msg.c_str());
                 xEventGroupSetBits(event_group_, MAIN_EVENT_NETWORK_CONNECTED);
                 break;
             }
@@ -392,6 +394,8 @@ void Application::CheckNewVersion() {
         auto display = board.GetDisplay();
         display->SetChatMessage("system", "");
         display->SetStatus(Lang::Strings::CHECKING_NEW_VERSION);
+        display->UpdateStatusBar(true);
+        vTaskDelay(pdMS_TO_TICKS(1000));
         esp_err_t err = ota_->CheckVersion();
         if (err != ESP_OK) {
             retry_count++;

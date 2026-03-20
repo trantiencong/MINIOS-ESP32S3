@@ -365,6 +365,10 @@ void LcdDisplay::SetupUI() {
     auto icon_font = lvgl_theme->icon_font()->font();
     auto large_icon_font = lvgl_theme->large_icon_font()->font();
     const auto& profile = GetDisplayProfile(width_, height_);
+    const lv_font_t* idle_info_font = text_font;
+    if (width_ == 240 && height_ == 240) {
+        idle_info_font = &font_noto_vi_20_4;
+    }
 
     auto screen = lv_screen_active();
     lv_obj_set_style_text_font(screen, text_font, 0);
@@ -828,6 +832,10 @@ void LcdDisplay::SetupUI() {
     auto text_font = lvgl_theme->text_font()->font();
     auto icon_font = lvgl_theme->icon_font()->font();
     const auto& profile = GetDisplayProfile(width_, height_);
+    const lv_font_t* idle_info_font = text_font;
+    if (width_ == 240 && height_ == 240) {
+        idle_info_font = &font_noto_vi_20_4;
+    }
     // auto large_icon_font = lvgl_theme->large_icon_font()->font();
 
     auto screen = lv_screen_active();
@@ -857,7 +865,7 @@ void LcdDisplay::SetupUI() {
     lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
 
     // đưa lên trên giờ
-    lv_obj_align(emoji_box_, LV_ALIGN_TOP_MID, 0, 4);
+    lv_obj_align(emoji_box_, LV_ALIGN_TOP_MID, 0, 4 + profile.emoji_offset_y);
 
     emoji_label_ = lv_label_create(emoji_box_);
     lv_obj_set_style_text_font(emoji_label_, &font_awesome_30_4, 0);
@@ -886,13 +894,13 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_style_pad_all(top_bar_, 0, 0);
     lv_obj_set_style_pad_top(top_bar_, lvgl_theme->spacing(2), 0);
     lv_obj_set_style_pad_bottom(top_bar_, lvgl_theme->spacing(2), 0);
-    lv_obj_set_style_pad_left(top_bar_, lvgl_theme->spacing(4), 0);
-    lv_obj_set_style_pad_right(top_bar_, lvgl_theme->spacing(4), 0);
+    lv_obj_set_style_pad_left(top_bar_, profile.top_bar_pad_left, 0);
+    lv_obj_set_style_pad_right(top_bar_, profile.top_bar_pad_right, 0);
     lv_obj_set_flex_flow(top_bar_, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(top_bar_, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER,
                           LV_FLEX_ALIGN_CENTER);
     lv_obj_set_scrollbar_mode(top_bar_, LV_SCROLLBAR_MODE_OFF);
-    lv_obj_align(top_bar_, LV_ALIGN_TOP_MID, 0, 0);
+    lv_obj_align(top_bar_, LV_ALIGN_TOP_MID, 0, profile.top_bar_offset_y);
 
     // Left icon
     network_label_ = lv_label_create(top_bar_);
@@ -952,6 +960,7 @@ void LcdDisplay::SetupUI() {
     lv_obj_align(status_label_, LV_ALIGN_CENTER, 0, 0);
 
     idle_location_label_ = lv_label_create(status_bar_);
+    lv_obj_set_style_text_font(idle_location_label_, idle_info_font, 0);
     idle_metrics_container_ = lv_obj_create(status_bar_);
     lv_obj_set_size(idle_metrics_container_, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
     lv_obj_set_style_bg_opa(idle_metrics_container_, LV_OPA_TRANSP, 0);
@@ -968,17 +977,18 @@ void LcdDisplay::SetupUI() {
     lv_label_set_long_mode(idle_location_label_, LV_LABEL_LONG_WRAP);
     lv_obj_set_style_text_align(idle_location_label_, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_color(idle_location_label_, lvgl_theme->text_color(), 0);
-    lv_label_set_text(idle_location_label_, "Quy Nhon");
+    lv_label_set_text(idle_location_label_, "From Skynet");
     lv_obj_align(idle_location_label_, LV_ALIGN_CENTER, 0, profile.idle_location_offset_y);
     lv_obj_add_flag(idle_location_label_, LV_OBJ_FLAG_HIDDEN);
 
     idle_weather_icon_label_ = lv_label_create(idle_metrics_container_);
     lv_label_set_text(idle_weather_icon_label_, "");
-    lv_obj_set_style_text_font(idle_weather_icon_label_, &BUILTIN_ICON_FONT, 0);
+    lv_obj_set_style_text_font(idle_weather_icon_label_, idle_info_font, 0);
     lv_obj_set_style_text_color(idle_weather_icon_label_, lvgl_theme->text_color(), 0);
     lv_obj_add_flag(idle_weather_icon_label_, LV_OBJ_FLAG_HIDDEN);
 
     idle_temp_label_ = lv_label_create(idle_metrics_container_);
+    lv_obj_set_style_text_font(idle_temp_label_, idle_info_font, 0);
     lv_obj_set_width(idle_temp_label_, LV_SIZE_CONTENT);
     lv_label_set_long_mode(idle_temp_label_, LV_LABEL_LONG_WRAP);
     lv_obj_set_style_text_align(idle_temp_label_, LV_TEXT_ALIGN_LEFT, 0);
@@ -988,7 +998,7 @@ void LcdDisplay::SetupUI() {
 
     idle_temp_icon_label_ = lv_label_create(idle_metrics_container_);
     lv_label_set_text(idle_temp_icon_label_, FONT_AWESOME_TEMPERATURE_HALF);
-    lv_obj_set_style_text_font(idle_temp_icon_label_, &BUILTIN_ICON_FONT, 0);
+    lv_obj_set_style_text_font(idle_temp_icon_label_, idle_info_font, 0);
     lv_obj_set_style_text_color(idle_temp_icon_label_, lvgl_theme->text_color(), 0);
     lv_obj_add_flag(idle_temp_icon_label_, LV_OBJ_FLAG_HIDDEN);
 
@@ -997,10 +1007,12 @@ void LcdDisplay::SetupUI() {
     lv_label_set_long_mode(idle_humidity_label_, LV_LABEL_LONG_WRAP);
     lv_obj_set_style_text_align(idle_humidity_label_, LV_TEXT_ALIGN_LEFT, 0);
     lv_obj_set_style_text_color(idle_humidity_label_, lvgl_theme->text_color(), 0);
+    lv_obj_set_style_text_font(idle_humidity_label_, idle_info_font, 0);
     lv_label_set_text(idle_humidity_label_, "80%");
     lv_obj_add_flag(idle_humidity_label_, LV_OBJ_FLAG_HIDDEN);
 
 #if CONFIG_USE_MULTILINE_CHAT_MESSAGE
+    /* Messenger area - full screen content zone for centered chat text */
     /* Bottom bar - high enough for long multiline text, but still below topbar */
     bottom_bar_ = lv_obj_create(screen);
     lv_obj_set_width(bottom_bar_, LV_HOR_RES);
@@ -1017,7 +1029,6 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_scrollbar_mode(bottom_bar_, LV_SCROLLBAR_MODE_OFF);
     lv_obj_align(bottom_bar_, LV_ALIGN_BOTTOM_MID, 0, 0);
 
-    /* chat_message_label_ placed in bottom_bar_, multiline wrapped display */
     chat_message_label_ = lv_label_create(bottom_bar_);
     lv_label_set_text(chat_message_label_, "");
     lv_obj_set_width(chat_message_label_, LV_HOR_RES - lvgl_theme->spacing(8));
@@ -1026,12 +1037,13 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_style_text_color(chat_message_label_, lvgl_theme->text_color(), 0);
     lv_obj_set_style_text_line_space(chat_message_label_, -4, 0);
     lv_obj_align(chat_message_label_, LV_ALIGN_BOTTOM_MID, 0, 0);
-    lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);  // Hide until there is content
+    lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
 #else
     /* Top layer: Bottom bar - fixed height at bottom */
     bottom_bar_ = lv_obj_create(screen);
     lv_obj_set_size(bottom_bar_, LV_HOR_RES, text_font->line_height + lvgl_theme->spacing(8));
     lv_obj_set_style_radius(bottom_bar_, 0, 0);
+    lv_obj_set_style_bg_opa(bottom_bar_, LV_OPA_TRANSP, 0);
     lv_obj_set_style_bg_color(bottom_bar_, lvgl_theme->background_color(), 0);
     lv_obj_set_style_text_color(bottom_bar_, lvgl_theme->text_color(), 0);
     lv_obj_set_style_pad_all(bottom_bar_, 0, 0);
@@ -1041,24 +1053,14 @@ void LcdDisplay::SetupUI() {
     lv_obj_set_scrollbar_mode(bottom_bar_, LV_SCROLLBAR_MODE_OFF);
     lv_obj_align(bottom_bar_, LV_ALIGN_BOTTOM_MID, 0, 0);
 
-    /* chat_message_label_ placed in bottom_bar_, single-line horizontal scroll */
     chat_message_label_ = lv_label_create(bottom_bar_);
     lv_label_set_text(chat_message_label_, "");
     lv_obj_set_width(chat_message_label_, LV_HOR_RES - lvgl_theme->spacing(8));
     lv_label_set_long_mode(chat_message_label_, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_set_style_text_align(chat_message_label_, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_color(chat_message_label_, lvgl_theme->text_color(), 0);
-    lv_obj_align(chat_message_label_, LV_ALIGN_CENTER, 0, 0);
-
-    // Start scrolling after a delay (short text won't scroll)
-    static lv_anim_t a;
-    lv_anim_init(&a);
-    lv_anim_set_delay(&a, 1000);
-    lv_anim_set_repeat_count(&a, LV_ANIM_REPEAT_INFINITE);
-    lv_obj_set_style_anim(chat_message_label_, &a, LV_PART_MAIN);
-    lv_obj_set_style_anim_duration(chat_message_label_, lv_anim_speed_clamped(60, 300, 60000),
-                                   LV_PART_MAIN);
-    lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);  // Hide until there is content
+    lv_obj_center(chat_message_label_);
+    lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
 #endif
 
     low_battery_popup_ = lv_obj_create(screen);
@@ -1145,6 +1147,24 @@ void LcdDisplay::SetStatus(const char* status) {
     }
 
     if (status_label_ != nullptr) {
+        auto lvgl_theme = static_cast<LvglTheme*>(current_theme_);
+        auto text_font = lvgl_theme->text_font()->font();
+
+        bool is_clock_text = false;
+        if (status != nullptr && strchr(status, ':') != nullptr) {
+            is_clock_text = true;
+        }
+
+        if (width_ == 240 && height_ == 240) {
+            if (is_clock_text) {
+                lv_obj_set_style_text_font(status_label_, text_font, 0);
+            } else {
+                lv_obj_set_style_text_font(status_label_, &font_noto_vi_20_4, 0);
+            }
+        } else {
+            lv_obj_set_style_text_font(status_label_, text_font, 0);
+        }
+
         lv_obj_clear_flag(status_label_, LV_OBJ_FLAG_HIDDEN);
         lv_label_set_text(status_label_, status ? status : "");
     }
@@ -1184,22 +1204,46 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
         content = "";
     }
 
-    lv_label_set_text(chat_message_label_, content);
-    // Show bottom_bar_ only when there is content (and subtitle is not globally hidden)
+    lv_label_set_text(chat_message_label_, content ? content : "");
+
+    bool is_messenger_text =
+        role != nullptr && (strcmp(role, "user") == 0 || strcmp(role, "assistant") == 0);
+
     if (bottom_bar_ != nullptr) {
         if (content == nullptr || content[0] == '\0') {
             lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
         } else if (!hide_subtitle_) {
             lv_obj_remove_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
         }
-    }
-#if CONFIG_USE_MULTILINE_CHAT_MESSAGE
-    if (bottom_bar_ != nullptr) {
-        lv_obj_align(bottom_bar_, LV_ALIGN_BOTTOM_MID, 0, 0);
-    }
-#endif
-}
 
+#if CONFIG_USE_MULTILINE_CHAT_MESSAGE
+        if (is_messenger_text) {
+            lv_obj_set_width(bottom_bar_, LV_HOR_RES);
+            lv_obj_set_height(bottom_bar_, LV_VER_RES);
+            lv_obj_align(bottom_bar_, LV_ALIGN_CENTER, 0, 0);
+            lv_obj_align(chat_message_label_, LV_ALIGN_CENTER, 0, 0);
+        } else {
+            lv_obj_set_width(bottom_bar_, LV_HOR_RES);
+            lv_obj_set_height(bottom_bar_, LV_VER_RES - 60);
+            lv_obj_align(bottom_bar_, LV_ALIGN_BOTTOM_MID, 0, 0);
+            lv_obj_align(chat_message_label_, LV_ALIGN_BOTTOM_MID, 0, 0);
+        }
+#else
+        if (is_messenger_text) {
+            lv_obj_set_size(bottom_bar_, LV_HOR_RES, LV_VER_RES);
+            lv_obj_align(bottom_bar_, LV_ALIGN_CENTER, 0, 0);
+            lv_obj_align(chat_message_label_, LV_ALIGN_CENTER, 0, 0);
+        } else {
+            auto lvgl_theme = static_cast<LvglTheme*>(current_theme_);
+            auto text_font = lvgl_theme->text_font()->font();
+            lv_obj_set_size(bottom_bar_, LV_HOR_RES,
+                            text_font->line_height + lvgl_theme->spacing(8));
+            lv_obj_align(bottom_bar_, LV_ALIGN_BOTTOM_MID, 0, 0);
+            lv_obj_center(chat_message_label_);
+        }
+#endif
+    }
+}
 void LcdDisplay::ClearChatMessages() {
     DisplayLockGuard lock(this);
     // In non-wechat mode, just clear the chat message label and hide the bar
