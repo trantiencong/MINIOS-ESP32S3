@@ -18,6 +18,11 @@ struct DisplayProfile {
     int emoji_box_size;
     int emoji_offset_y;
     int multiline_text_offset_y;
+
+    int activation_qr_size;
+    int activation_qr_offset_y;
+    int activation_hint_gap;
+    int activation_hint_width_margin;
 };
 
 const DisplayProfile& GetDisplayProfile(int width, int height);

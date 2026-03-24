@@ -38,6 +38,10 @@ static const DisplayProfile PROFILE_240X240 = {
 
     .multiline_text_offset_y = 0,  // Độ lệch dọc của text nhiều dòng trong các màn nội dung/chat
                                    // Dùng để cân lại vị trí khối chữ nếu cần
+    .activation_qr_size = 128,
+    .activation_qr_offset_y = -18,
+    .activation_hint_gap = 14,
+    .activation_hint_width_margin = 24,
 };
 
 static const DisplayProfile PROFILE_172X320 = {
@@ -52,6 +56,10 @@ static const DisplayProfile PROFILE_172X320 = {
     .emoji_box_size = 72,
     .emoji_offset_y = 0,
     .multiline_text_offset_y = 0,
+    .activation_qr_size = 96,
+    .activation_qr_offset_y = -10,
+    .activation_hint_gap = 10,
+    .activation_hint_width_margin = 18,
 };
 
 static const DisplayProfile PROFILE_240X320 = {
@@ -66,6 +74,10 @@ static const DisplayProfile PROFILE_240X320 = {
     .emoji_box_size = 80,
     .emoji_offset_y = 0,
     .multiline_text_offset_y = 0,
+    .activation_qr_size = 112,
+    .activation_qr_offset_y = -14,
+    .activation_hint_gap = 12,
+    .activation_hint_width_margin = 22,
 };
 
 static const DisplayProfile PROFILE_320X240 = {
@@ -80,6 +92,10 @@ static const DisplayProfile PROFILE_320X240 = {
     .emoji_box_size = 96,
     .emoji_offset_y = 18,
     .multiline_text_offset_y = 0,
+    .activation_qr_size = 118,
+    .activation_qr_offset_y = -12,
+    .activation_hint_gap = 12,
+    .activation_hint_width_margin = 20,
 };
 
 static const DisplayProfile PROFILE_368X448 = {
@@ -95,6 +111,10 @@ static const DisplayProfile PROFILE_368X448 = {
     .emoji_box_size = 112,
     .emoji_offset_y = 0,
     .multiline_text_offset_y = 0,
+    .activation_qr_size = 170,
+    .activation_qr_offset_y = -28,
+    .activation_hint_gap = 18,
+    .activation_hint_width_margin = 32,
 };
 
 const DisplayProfile& GetDisplayProfile(int width, int height) {

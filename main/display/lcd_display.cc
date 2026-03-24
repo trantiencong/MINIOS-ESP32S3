@@ -1428,19 +1428,21 @@ void LcdDisplay::ShowActivationCode(const char* title, const char* code, const c
         lv_obj_move_foreground(top_bar_);
     }
 
-    const lv_coord_t qr_size = 128;
+    const auto& profile = GetDisplayProfile(width_, height_);
+    const lv_coord_t qr_size = profile.activation_qr_size;
 
     activation_qr_canvas_ = lv_canvas_create(activation_container_);
     lv_obj_set_size(activation_qr_canvas_, qr_size, qr_size);
     DrawQrToCanvas(activation_qr_canvas_, url, qr_size);
-    lv_obj_align(activation_qr_canvas_, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_align(activation_qr_canvas_, LV_ALIGN_CENTER, 0, profile.activation_qr_offset_y);
 
     activation_hint_label_ = lv_label_create(activation_container_);
     lv_label_set_text(activation_hint_label_, "Quét QR để kích hoạt");
-    lv_label_set_long_mode(activation_hint_label_, LV_LABEL_LONG_WRAP);
-    lv_obj_set_width(activation_hint_label_, LV_HOR_RES - 24);
+    lv_label_set_long_mode(activation_hint_label_, LV_LABEL_LONG_CLIP);
+    lv_obj_set_width(activation_hint_label_, LV_SIZE_CONTENT);
     lv_obj_set_style_text_align(activation_hint_label_, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_align_to(activation_hint_label_, activation_qr_canvas_, LV_ALIGN_OUT_BOTTOM_MID, 0, 14);
+    lv_obj_align_to(activation_hint_label_, activation_qr_canvas_, LV_ALIGN_OUT_BOTTOM_MID, 0,
+                    profile.activation_hint_gap);
 }
 
 void LcdDisplay::ShowActivationSuccess(const char* message) {
@@ -1453,6 +1455,12 @@ void LcdDisplay::ShowActivationSuccess(const char* message) {
             activation_qr_canvas_ = nullptr;
             activation_code_label_ = nullptr;
             activation_hint_label_ = nullptr;
+        }
+        if (status_bar_ != nullptr) {
+            lv_obj_remove_flag(status_bar_, LV_OBJ_FLAG_HIDDEN);
+        }
+        if (bottom_bar_ != nullptr) {
+            lv_obj_remove_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
         }
 
         if (status_label_ != nullptr) {
