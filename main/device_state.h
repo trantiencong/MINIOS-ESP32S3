@@ -11,8 +11,10 @@ enum DeviceState {
     kDeviceStateSpeaking,
     kDeviceStateUpgrading,
     kDeviceStateActivating,
+    kDeviceStateActivationRequired,
+    kDeviceStateActivationWaiting,
     kDeviceStateAudioTesting,
     kDeviceStateFatalError
 };
 
-#endif // _DEVICE_STATE_H_ 
+#endif  // _DEVICE_STATE_H_

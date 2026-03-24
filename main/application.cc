@@ -5,12 +5,16 @@
 #include <arpa/inet.h>
 #include <cJSON.h>
 #include <font_awesome.h>
+#include <algorithm>
+#include <cctype>
 #include <cstring>
+#include <ctime>
 #include "assets.h"
 #include "assets/lang_config.h"
 #include "audio_codec.h"
 #include "board.h"
 #include "display.h"
+#include "display/lcd_display.h"
 #include "mcp_server.h"
 #include "mqtt_protocol.h"
 #include "settings.h"
@@ -57,7 +61,7 @@ bool Application::SetDeviceState(DeviceState state) { return state_machine_.Tran
 void Application::Initialize() {
     auto& board = Board::GetInstance();
     SetDeviceState(kDeviceStateStarting);
-
+    LoadActivationState();
     auto display = board.GetDisplay();
     display->SetupUI();
 
@@ -246,21 +250,24 @@ void Application::HandleNetworkConnectedEvent() {
     auto state = GetDeviceState();
 
     if (state == kDeviceStateStarting || state == kDeviceStateWifiConfiguring) {
-        // Network is ready, start activation
-        SetDeviceState(kDeviceStateActivating);
-        if (activation_task_handle_ != nullptr) {
-            ESP_LOGW(TAG, "Activation task already running");
-            return;
-        }
+        if (!device_activated_) {
+            EnterActivationMode();
+        } else {
+            SetDeviceState(kDeviceStateActivating);
+            if (activation_task_handle_ != nullptr) {
+                ESP_LOGW(TAG, "Activation task already running");
+                return;
+            }
 
-        xTaskCreate(
-            [](void* arg) {
-                Application* app = static_cast<Application*>(arg);
-                app->ActivationTask();
-                app->activation_task_handle_ = nullptr;
-                vTaskDelete(NULL);
-            },
-            "activation", 4096 * 2, this, 2, &activation_task_handle_);
+            xTaskCreate(
+                [](void* arg) {
+                    Application* app = static_cast<Application*>(arg);
+                    app->ActivationTask();
+                    app->activation_task_handle_ = nullptr;
+                    vTaskDelete(NULL);
+                },
+                "activation", 4096 * 2, this, 2, &activation_task_handle_);
+        }
     }
 
     // Update the status bar immediately to show the network state
@@ -281,10 +288,83 @@ void Application::HandleNetworkDisconnectedEvent() {
     auto display = Board::GetInstance().GetDisplay();
     display->UpdateStatusBar(true);
 }
+std::string Application::NormalizeDeviceCode(const std::string& mac) {
+    std::string out;
+    out.reserve(mac.size());
+    for (char c : mac) {
+        if (c == ':') {
+            continue;
+        }
+        out.push_back(static_cast<char>(std::toupper(static_cast<unsigned char>(c))));
+    }
+    return out;
+}
+
+void Application::LoadActivationState() {
+    Settings settings("device", false);
+    device_activated_ = settings.GetBool("activated", false);
+    device_activation_code_ = settings.GetString("device_code", "");
+    device_activation_url_ = settings.GetString("activation_url", "");
+
+    if (device_activation_code_.empty()) {
+        device_activation_code_ = NormalizeDeviceCode(SystemInfo::GetMacAddress());
+    }
+
+    if (device_activation_url_.empty()) {
+        device_activation_url_ = "https://minios.tech/activate?code=" + device_activation_code_;
+    }
+}
+
+void Application::SaveActivationState(bool activated) {
+    Settings settings("device", true);
+    settings.SetBool("activated", activated);
+    settings.SetString("device_code", device_activation_code_);
+    settings.SetString("activation_url", device_activation_url_);
+    if (activated) {
+        settings.SetString("activated_at", std::to_string((long long)time(nullptr)));
+    }
+    device_activated_ = activated;
+}
+
+void Application::EnterActivationMode() {
+    device_activation_code_ = NormalizeDeviceCode(SystemInfo::GetMacAddress());
+    device_activation_url_ = "https://minios.tech/activate?code=" + device_activation_code_;
+
+    Settings settings("device", true);
+    settings.SetString("device_code", device_activation_code_);
+    settings.SetString("activation_url", device_activation_url_);
+    settings.SetBool("activated", false);
+
+    auto display = Board::GetInstance().GetDisplay();
+    auto lcd = dynamic_cast<LcdDisplay*>(display);
+    if (lcd != nullptr) {
+        lcd->ShowActivationCode("Kích hoạt thiết bị", device_activation_code_.c_str(),
+                                device_activation_url_.c_str());
+    } else {
+        display->SetStatus("Kích hoạt thiết bị");
+        display->SetChatMessage("system", device_activation_url_.c_str());
+    }
+
+    SetDeviceState(kDeviceStateActivationRequired);
+    InitializeProtocol();
+    SetDeviceState(kDeviceStateActivationWaiting);
+}
 
 void Application::HandleActivationDoneEvent() {
     ESP_LOGI(TAG, "Activation done");
-
+    if (!device_activated_) {
+        auto display = Board::GetInstance().GetDisplay();
+        auto lcd = dynamic_cast<LcdDisplay*>(display);
+        if (lcd != nullptr) {
+            lcd->ShowActivationCode("Kích hoạt thiết bị", device_activation_code_.c_str(),
+                                    device_activation_url_.c_str());
+        } else {
+            display->SetStatus("Đang chờ kích hoạt");
+            display->SetChatMessage("system", device_activation_url_.c_str());
+        }
+        display->UpdateStatusBar(true);
+        return;
+    }
     SystemInfo::PrintHeapStats();
 
     has_server_time_ = ota_->HasServerTime();
@@ -471,13 +551,17 @@ void Application::InitializeProtocol() {
 
     display->SetStatus(Lang::Strings::LOADING_PROTOCOL);
 
-    if (ota_->HasMqttConfig()) {
-        protocol_ = std::make_unique<MqttProtocol>();
-    } else if (ota_->HasWebsocketConfig()) {
+    if (!device_activated_) {
         protocol_ = std::make_unique<WebsocketProtocol>();
     } else {
-        ESP_LOGW(TAG, "No protocol specified in the OTA config, using MQTT");
-        protocol_ = std::make_unique<MqttProtocol>();
+        if (ota_ && ota_->HasMqttConfig()) {
+            protocol_ = std::make_unique<MqttProtocol>();
+        } else if (ota_ && ota_->HasWebsocketConfig()) {
+            protocol_ = std::make_unique<WebsocketProtocol>();
+        } else {
+            ESP_LOGW(TAG, "No protocol specified in the OTA config, using MQTT");
+            protocol_ = std::make_unique<MqttProtocol>();
+        }
     }
 
     protocol_->OnConnected([this]() { DismissAlert(); });
@@ -507,6 +591,20 @@ void Application::InitializeProtocol() {
         board.SetPowerSaveLevel(PowerSaveLevel::LOW_POWER);
         Schedule([this]() {
             auto display = Board::GetInstance().GetDisplay();
+
+            if (!device_activated_) {
+                auto lcd = dynamic_cast<LcdDisplay*>(display);
+                if (lcd != nullptr) {
+                    lcd->ShowActivationCode("Kích hoạt thiết bị", device_activation_code_.c_str(),
+                                            device_activation_url_.c_str());
+                } else {
+                    display->SetStatus("Đang chờ kích hoạt");
+                    display->SetChatMessage("system", device_activation_url_.c_str());
+                }
+                SetDeviceState(kDeviceStateActivationWaiting);
+                return;
+            }
+
             display->SetChatMessage("system", "");
             SetDeviceState(kDeviceStateIdle);
         });
@@ -515,8 +613,23 @@ void Application::InitializeProtocol() {
     protocol_->OnIncomingJson([this, display](const cJSON* root) {
         // Parse JSON data
         auto type = cJSON_GetObjectItem(root, "type");
+        if (!cJSON_IsString(type) || type->valuestring == nullptr) {
+            ESP_LOGW(TAG, "Invalid message: missing type");
+            return;
+        }
+
+        if (strcmp(type->valuestring, "device_activated") == 0) {
+            HandleDeviceActivatedMessage(root);
+            return;
+        }
+
         if (strcmp(type->valuestring, "tts") == 0) {
             auto state = cJSON_GetObjectItem(root, "state");
+            if (!cJSON_IsString(state) || state->valuestring == nullptr) {
+                ESP_LOGW(TAG, "Invalid tts message: missing state");
+                return;
+            }
+
             if (strcmp(state->valuestring, "start") == 0) {
                 Schedule([this]() {
                     aborted_ = false;
@@ -601,6 +714,57 @@ void Application::InitializeProtocol() {
     });
 
     protocol_->Start();
+}
+
+void Application::HandleDeviceActivatedMessage(const cJSON* root) {
+    auto device_id = cJSON_GetObjectItem(root, "device_id");
+    auto status = cJSON_GetObjectItem(root, "status");
+    auto message = cJSON_GetObjectItem(root, "message");
+
+    if (!cJSON_IsString(device_id) || !cJSON_IsString(status)) {
+        ESP_LOGW(TAG, "Invalid device_activated payload");
+        return;
+    }
+
+    if (device_activation_code_ != device_id->valuestring) {
+        ESP_LOGW(TAG, "device_activated ignored, device_id mismatch");
+        return;
+    }
+
+    if (strcmp(status->valuestring, "active") != 0) {
+        ESP_LOGW(TAG, "device_activated ignored, status != active");
+        return;
+    }
+
+    SaveActivationState(true);
+
+    Schedule([this, msg = std::string(cJSON_IsString(message) ? message->valuestring
+                                                              : "Kích hoạt thành công")]() {
+        auto display = Board::GetInstance().GetDisplay();
+        auto lcd = dynamic_cast<LcdDisplay*>(display);
+        if (lcd != nullptr) {
+            lcd->ShowActivationSuccess(msg.c_str());
+        } else {
+            display->SetStatus("Kích hoạt thành công");
+            display->SetChatMessage("system", msg.c_str());
+        }
+        display->UpdateStatusBar(true);
+
+        audio_service_.PlaySound(Lang::Sounds::OGG_SUCCESS);
+
+        SetDeviceState(kDeviceStateActivating);
+
+        if (activation_task_handle_ == nullptr) {
+            xTaskCreate(
+                [](void* arg) {
+                    Application* app = static_cast<Application*>(arg);
+                    app->ActivationTask();
+                    app->activation_task_handle_ = nullptr;
+                    vTaskDelete(NULL);
+                },
+                "activation", 4096 * 2, this, 2, &activation_task_handle_);
+        }
+    });
 }
 
 void Application::ShowActivationCode(const std::string& code, const std::string& message) {

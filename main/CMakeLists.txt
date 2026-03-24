@@ -39,10 +39,11 @@ set(SOURCES "audio/audio_codec.cc"
             "device_state_machine.cc"
             "assets.cc"
             "assets/fonts/font_noto_vi_20_4.c"
+            "components/qrcode/qrcodegen.c"
             "main.cc"
             )
 
-set(INCLUDE_DIRS "." "display" "display/lvgl_display" "display/lvgl_display/jpg" "audio" "audio/demuxer" "protocols")
+set(INCLUDE_DIRS "." "display" "display/lvgl_display" "display/lvgl_display/jpg" "audio" "audio/demuxer" "protocols" "components/qrcode")
 
 # Add board common files
 list(APPEND SOURCES

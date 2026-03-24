@@ -28,6 +28,10 @@ protected:
     lv_obj_t* preview_image_ = nullptr;
     lv_obj_t* emoji_label_ = nullptr;
     lv_obj_t* emoji_image_ = nullptr;
+    lv_obj_t* activation_container_ = nullptr;
+    lv_obj_t* activation_qr_canvas_ = nullptr;
+    lv_obj_t* activation_code_label_ = nullptr;
+    lv_obj_t* activation_hint_label_ = nullptr;
     std::unique_ptr<LvglGif> gif_controller_ = nullptr;
     lv_obj_t* emoji_box_ = nullptr;
     lv_obj_t* chat_message_label_ = nullptr;
@@ -51,6 +55,8 @@ public:
     virtual void SetPreviewImage(std::unique_ptr<LvglImage> image) override;
     virtual void SetupUI() override;
     virtual void SetHideSubtitle(bool hide) override;
+    virtual void ShowActivationCode(const char* title, const char* code, const char* url);
+    virtual void ShowActivationSuccess(const char* message);
 
 private:
     void HideIdleWeatherNow();

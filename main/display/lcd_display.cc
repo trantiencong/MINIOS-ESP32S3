@@ -1,8 +1,10 @@
 #include "lcd_display.h"
+#include <vector>
 #include "assets/lang_config.h"
 #include "display_profile.h"
 #include "gif/lvgl_gif.h"
 #include "lvgl_theme.h"
+#include "qrcodegen.h"
 #include "settings.h"
 
 #include <esp_err.h>
@@ -63,7 +65,57 @@ void LcdDisplay::InitializeLcdThemes() {
     theme_manager.RegisterTheme("light", light_theme);
     theme_manager.RegisterTheme("dark", dark_theme);
 }
+static void DrawQrToCanvas(lv_obj_t* canvas, const std::string& text, int canvas_size) {
+    static uint8_t tempBuffer[qrcodegen_BUFFER_LEN_MAX];
+    static uint8_t qrBuffer[qrcodegen_BUFFER_LEN_MAX];
 
+    bool ok = qrcodegen_encodeText(text.c_str(), tempBuffer, qrBuffer, qrcodegen_Ecc_LOW,
+                                   qrcodegen_VERSION_MIN, 10, qrcodegen_Mask_AUTO, true);
+    if (!ok) {
+        return;
+    }
+
+    const int size = qrcodegen_getSize(qrBuffer);
+    if (size <= 0) {
+        return;
+    }
+
+    static std::vector<lv_color_t> buf;
+    buf.resize(canvas_size * canvas_size);
+
+    lv_canvas_set_buffer(canvas, buf.data(), canvas_size, canvas_size, LV_COLOR_FORMAT_NATIVE);
+    lv_canvas_fill_bg(canvas, lv_color_white(), LV_OPA_COVER);
+
+    const int quiet_modules = 4;  // QR chuẩn cần viền trắng 4 ô
+    const int total_modules = size + quiet_modules * 2;
+
+    const int scale = canvas_size / total_modules;
+    if (scale <= 0) {
+        return;
+    }
+
+    const int qr_pixels = total_modules * scale;
+    const int offset_x = (canvas_size - qr_pixels) / 2;
+    const int offset_y = (canvas_size - qr_pixels) / 2;
+
+    for (int y = 0; y < size; ++y) {
+        for (int x = 0; x < size; ++x) {
+            if (!qrcodegen_getModule(qrBuffer, x, y)) {
+                continue;
+            }
+
+            int start_x = offset_x + (x + quiet_modules) * scale;
+            int start_y = offset_y + (y + quiet_modules) * scale;
+
+            for (int dy = 0; dy < scale; ++dy) {
+                for (int dx = 0; dx < scale; ++dx) {
+                    lv_canvas_set_px(canvas, start_x + dx, start_y + dy, lv_color_black(),
+                                     LV_OPA_COVER);
+                }
+            }
+        }
+    }
+}
 LcdDisplay::LcdDisplay(esp_lcd_panel_io_handle_t panel_io, esp_lcd_panel_handle_t panel, int width,
                        int height)
     : panel_io_(panel_io), panel_(panel) {
@@ -513,6 +565,13 @@ void LcdDisplay::SetupUI() {
 #endif
 void LcdDisplay::SetChatMessage(const char* role, const char* content) {
     DisplayLockGuard lock(this);
+    if (activation_container_ != nullptr) {
+        lv_obj_del(activation_container_);
+        activation_container_ = nullptr;
+        activation_qr_canvas_ = nullptr;
+        activation_code_label_ = nullptr;
+        activation_hint_label_ = nullptr;
+    }
 
     if (content_ == nullptr) {
         return;
@@ -1154,13 +1213,16 @@ void LcdDisplay::SetStatus(const char* status) {
         if (status != nullptr && strchr(status, ':') != nullptr) {
             is_clock_text = true;
         }
-
+        // phần này khai báo bổ sung cho màn hình theo kích thước nếu như có độ sai lệch về font
+        // chữ, có thể điều chỉnh lại cho phù hợp với từng màn hình.
         if (width_ == 240 && height_ == 240) {
             if (is_clock_text) {
                 lv_obj_set_style_text_font(status_label_, text_font, 0);
             } else {
                 lv_obj_set_style_text_font(status_label_, &font_noto_vi_20_4, 0);
             }
+        } else if (width_ == 320 && height_ == 240) {
+            lv_obj_set_style_text_font(status_label_, &font_noto_vi_20_4, 0);
         } else {
             lv_obj_set_style_text_font(status_label_, text_font, 0);
         }
@@ -1191,6 +1253,13 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
                  role, content);
     }
     DisplayLockGuard lock(this);
+    if (activation_container_ != nullptr) {
+        lv_obj_del(activation_container_);
+        activation_container_ = nullptr;
+        activation_qr_canvas_ = nullptr;
+        activation_code_label_ = nullptr;
+        activation_hint_label_ = nullptr;
+    }
     if (chat_message_label_ == nullptr) {
         if (setup_ui_called_) {
             ESP_LOGW(TAG,
@@ -1217,11 +1286,35 @@ void LcdDisplay::SetChatMessage(const char* role, const char* content) {
         }
 
 #if CONFIG_USE_MULTILINE_CHAT_MESSAGE
+        const auto& profile = GetDisplayProfile(width_, height_);
+
+        int top_reserved = profile.content_pad_top + profile.content_pad_all + 8;
+        int bottom_reserved = profile.content_pad_all;
+        int chat_height = LV_VER_RES - top_reserved - bottom_reserved;
+        if (chat_height < 60) {
+            chat_height = 60;
+        }
+
         if (is_messenger_text) {
             lv_obj_set_width(bottom_bar_, LV_HOR_RES);
-            lv_obj_set_height(bottom_bar_, LV_VER_RES);
-            lv_obj_align(bottom_bar_, LV_ALIGN_CENTER, 0, 0);
-            lv_obj_align(chat_message_label_, LV_ALIGN_CENTER, 0, 0);
+            lv_obj_set_height(bottom_bar_, chat_height);
+            lv_obj_align(bottom_bar_, LV_ALIGN_BOTTOM_MID, 0, -bottom_reserved);
+
+            lv_obj_update_layout(bottom_bar_);
+            lv_obj_update_layout(chat_message_label_);
+
+            int usable_h = chat_height - profile.content_pad_all * 2;
+            if (usable_h < 20)
+                usable_h = 20;
+
+            int text_h = lv_obj_get_height(chat_message_label_);
+
+            if (text_h > usable_h) {
+                lv_obj_align(chat_message_label_, LV_ALIGN_TOP_MID, 0, profile.content_pad_all / 2);
+            } else {
+                lv_obj_align(chat_message_label_, LV_ALIGN_CENTER, 0,
+                             profile.multiline_text_offset_y);
+            }
         } else {
             lv_obj_set_width(bottom_bar_, LV_HOR_RES);
             lv_obj_set_height(bottom_bar_, LV_VER_RES - 60);
@@ -1255,7 +1348,133 @@ void LcdDisplay::ClearChatMessages() {
     }
 }
 #endif
+void LcdDisplay::ShowActivationCode(const char* title, const char* code, const char* url) {
+    (void)title;
+    (void)code;
 
+    DisplayLockGuard lock(this);
+
+    lv_obj_t* screen = lv_screen_active();
+
+    // Ẩn các layer cũ của boot/status/chat nhưng GIỮ top_bar_
+    if (status_bar_ != nullptr) {
+        lv_obj_add_flag(status_bar_, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (bottom_bar_ != nullptr) {
+        lv_obj_add_flag(bottom_bar_, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (notification_label_ != nullptr) {
+        lv_label_set_text(notification_label_, "");
+    }
+    if (status_label_ != nullptr) {
+        lv_label_set_text(status_label_, "");
+    }
+    if (chat_message_label_ != nullptr) {
+        lv_label_set_text(chat_message_label_, "");
+    }
+    if (idle_location_label_ != nullptr) {
+        lv_obj_add_flag(idle_location_label_, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (idle_metrics_container_ != nullptr) {
+        lv_obj_add_flag(idle_metrics_container_, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (emoji_label_ != nullptr) {
+        lv_obj_add_flag(emoji_label_, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (emoji_box_ != nullptr) {
+        lv_obj_add_flag(emoji_box_, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (preview_image_ != nullptr) {
+        lv_obj_add_flag(preview_image_, LV_OBJ_FLAG_HIDDEN);
+    }
+
+    // Xóa content cũ nếu có
+    if (content_ != nullptr) {
+        lv_obj_clean(content_);
+        chat_message_label_ = nullptr;
+    }
+
+    // Xóa overlay activation cũ
+    if (activation_container_ != nullptr) {
+        lv_obj_del(activation_container_);
+        activation_container_ = nullptr;
+        activation_qr_canvas_ = nullptr;
+        activation_code_label_ = nullptr;
+        activation_hint_label_ = nullptr;
+    }
+
+    // Tính vùng hiển thị bên dưới top bar để giữ icon wifi/pin
+    lv_coord_t topbar_h = 0;
+    if (top_bar_ != nullptr) {
+        lv_obj_update_layout(top_bar_);
+        topbar_h = lv_obj_get_height(top_bar_);
+    }
+
+    // Overlay activation chỉ chiếm vùng dưới top bar
+    activation_container_ = lv_obj_create(screen);
+    lv_obj_remove_style_all(activation_container_);
+    lv_obj_set_pos(activation_container_, 0, topbar_h);
+    lv_obj_set_size(activation_container_, LV_HOR_RES, LV_VER_RES - topbar_h);
+    lv_obj_set_style_bg_opa(activation_container_, LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_color(activation_container_, lv_color_white(), 0);
+    lv_obj_set_style_border_width(activation_container_, 0, 0);
+    lv_obj_set_style_pad_all(activation_container_, 0, 0);
+
+    // Đưa activation lên trên status/content cũ
+    lv_obj_move_foreground(activation_container_);
+
+    // Đưa top_bar_ lên cao nhất để luôn thấy icon wifi/pin
+    if (top_bar_ != nullptr) {
+        lv_obj_move_foreground(top_bar_);
+    }
+
+    const lv_coord_t qr_size = 128;
+
+    activation_qr_canvas_ = lv_canvas_create(activation_container_);
+    lv_obj_set_size(activation_qr_canvas_, qr_size, qr_size);
+    DrawQrToCanvas(activation_qr_canvas_, url, qr_size);
+    lv_obj_align(activation_qr_canvas_, LV_ALIGN_CENTER, 0, 0);
+
+    activation_hint_label_ = lv_label_create(activation_container_);
+    lv_label_set_text(activation_hint_label_, "Quét QR để kích hoạt");
+    lv_label_set_long_mode(activation_hint_label_, LV_LABEL_LONG_WRAP);
+    lv_obj_set_width(activation_hint_label_, LV_HOR_RES - 24);
+    lv_obj_set_style_text_align(activation_hint_label_, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_align_to(activation_hint_label_, activation_qr_canvas_, LV_ALIGN_OUT_BOTTOM_MID, 0, 14);
+}
+
+void LcdDisplay::ShowActivationSuccess(const char* message) {
+    {
+        DisplayLockGuard lock(this);
+
+        if (activation_container_ != nullptr) {
+            lv_obj_del(activation_container_);
+            activation_container_ = nullptr;
+            activation_qr_canvas_ = nullptr;
+            activation_code_label_ = nullptr;
+            activation_hint_label_ = nullptr;
+        }
+
+        if (status_label_ != nullptr) {
+            lv_obj_remove_flag(status_label_, LV_OBJ_FLAG_HIDDEN);
+        }
+        if (notification_label_ != nullptr) {
+            lv_obj_remove_flag(notification_label_, LV_OBJ_FLAG_HIDDEN);
+        }
+        if (chat_message_label_ != nullptr) {
+            lv_obj_remove_flag(chat_message_label_, LV_OBJ_FLAG_HIDDEN);
+        }
+        if (idle_location_label_ != nullptr) {
+            lv_obj_remove_flag(idle_location_label_, LV_OBJ_FLAG_HIDDEN);
+        }
+        if (idle_metrics_container_ != nullptr) {
+            lv_obj_remove_flag(idle_metrics_container_, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+
+    SetStatus("Kích hoạt thành công");
+    SetChatMessage("system", message);
+}
 void LcdDisplay::SetEmotion(const char* emotion) {
     if (!setup_ui_called_) {
         ESP_LOGW(TAG, "SetEmotion('%s') called before SetupUI() - emotion will not be displayed!",
@@ -1323,12 +1542,12 @@ void LcdDisplay::SetEmotion(const char* emotion) {
         if (gif_controller_->IsLoaded()) {
             gif_controller_->SetFrameCallback([this]() {
                 lv_image_set_src(emoji_image_, gif_controller_->image_dsc());
-                lv_image_set_scale(emoji_image_, 96);
+                lv_image_set_scale(emoji_image_, 110);
                 lv_obj_center(emoji_image_);
             });
 
             lv_image_set_src(emoji_image_, gif_controller_->image_dsc());
-            lv_image_set_scale(emoji_image_, 96);
+            lv_image_set_scale(emoji_image_, 110);
             lv_obj_center(emoji_image_);
 
             gif_controller_->Start();
