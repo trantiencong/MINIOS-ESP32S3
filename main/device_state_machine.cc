@@ -63,7 +63,8 @@ bool DeviceStateMachine::IsValidTransition(DeviceState from, DeviceState to) con
                    to == kDeviceStateWifiConfiguring;
 
         case kDeviceStateActivationWaiting:
-            return to == kDeviceStateIdle || to == kDeviceStateWifiConfiguring;
+            return to == kDeviceStateIdle || to == kDeviceStateWifiConfiguring ||
+                   to == kDeviceStateActivating;
 
         case kDeviceStateUpgrading:
             // Can go to idle (upgrade failed) or activating

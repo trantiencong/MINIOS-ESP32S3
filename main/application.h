@@ -149,12 +149,17 @@ private:
     std::string device_activation_code_;
     std::string device_activation_url_;
     bool device_activated_ = false;
+    bool activation_waiting_connection_lost_ = false;
+    bool voice_session_cancelled_by_user_ = false;
+    int64_t activation_waiting_started_ms_ = 0;
+    int64_t last_activation_reconnect_attempt_ms_ = 0;
 
     // Event handlers
     void HandleStateChangedEvent();
     void HandleToggleChatEvent();
     void HandleStartListeningEvent();
     void HandleStopListeningEvent();
+    void MarkVoiceSessionCancelledByUser(const char* source);
     void HandleNetworkConnectedEvent();
     void HandleNetworkDisconnectedEvent();
     void HandleActivationDoneEvent();
@@ -167,6 +172,9 @@ private:
 
     // Activation task (runs in background)
     void ActivationTask();
+    void StartActivationTaskIfNeeded();
+    void ReconnectActivationProtocolIfNeeded();
+    void HandleActivationWaitingTick();
 
     // Helper methods
     void CheckAssetsVersion();

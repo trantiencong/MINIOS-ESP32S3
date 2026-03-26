@@ -22,6 +22,11 @@
 #include "websocket_protocol.h"
 #define TAG "Application"
 
+namespace {
+constexpr int64_t kActivationReconnectIntervalMs = 8000;
+constexpr int64_t kActivationWaitingWarnIntervalMs = 60000;
+}  // namespace
+
 Application::Application() {
     event_group_ = xEventGroupCreate();
 
@@ -237,6 +242,10 @@ void Application::Run() {
             auto display = Board::GetInstance().GetDisplay();
             display->UpdateStatusBar();
 
+            if (GetDeviceState() == kDeviceStateActivationWaiting && !device_activated_) {
+                HandleActivationWaitingTick();
+            }
+
             // Print debug info every 10 seconds
             if (clock_ticks_ % 10 == 0) {
                 SystemInfo::PrintHeapStats();
@@ -249,10 +258,20 @@ void Application::HandleNetworkConnectedEvent() {
     ESP_LOGI(TAG, "Network connected");
     auto state = GetDeviceState();
 
+    if (state == kDeviceStateActivationWaiting && !device_activated_) {
+        ESP_LOGI(
+            TAG,
+            "HandleNetworkConnectedEvent: restore activation websocket after network recovery");
+        ReconnectActivationProtocolIfNeeded();
+    }
+
     if (state == kDeviceStateStarting || state == kDeviceStateWifiConfiguring) {
         if (!device_activated_) {
             EnterActivationMode();
         } else {
+            ESP_LOGI(TAG,
+                     "HandleNetworkConnectedEvent: device already activated, continue runtime "
+                     "initialization");
             SetDeviceState(kDeviceStateActivating);
             if (activation_task_handle_ != nullptr) {
                 ESP_LOGW(TAG, "Activation task already running");
@@ -278,6 +297,9 @@ void Application::HandleNetworkConnectedEvent() {
 void Application::HandleNetworkDisconnectedEvent() {
     // Close current conversation when network disconnected
     auto state = GetDeviceState();
+    if (state == kDeviceStateActivationWaiting && !device_activated_) {
+        activation_waiting_connection_lost_ = true;
+    }
     if (state == kDeviceStateConnecting || state == kDeviceStateListening ||
         state == kDeviceStateSpeaking) {
         ESP_LOGI(TAG, "Closing audio channel due to network disconnection");
@@ -327,8 +349,12 @@ void Application::SaveActivationState(bool activated) {
 }
 
 void Application::EnterActivationMode() {
-    device_activation_code_ = NormalizeDeviceCode(SystemInfo::GetMacAddress());
-    device_activation_url_ = "https://minios.tech/activate?code=" + device_activation_code_;
+    if (device_activation_code_.empty()) {
+        device_activation_code_ = NormalizeDeviceCode(SystemInfo::GetMacAddress());
+    }
+    if (device_activation_url_.empty()) {
+        device_activation_url_ = "https://minios.tech/activate?code=" + device_activation_code_;
+    }
 
     Settings settings("device", true);
     settings.SetString("device_code", device_activation_code_);
@@ -346,14 +372,24 @@ void Application::EnterActivationMode() {
     }
 
     SetDeviceState(kDeviceStateActivationRequired);
+
+    ESP_LOGI(TAG, "EnterActivationMode: device_code=%s activation_url=%s",
+             device_activation_code_.c_str(), device_activation_url_.c_str());
+    ESP_LOGI(TAG, "EnterActivationMode: calling InitializeProtocol()");
+
+    activation_waiting_started_ms_ = esp_timer_get_time() / 1000;
+    last_activation_reconnect_attempt_ms_ = 0;
+    activation_waiting_connection_lost_ = false;
+
     InitializeProtocol();
     SetDeviceState(kDeviceStateActivationWaiting);
 }
 
 void Application::HandleActivationDoneEvent() {
     ESP_LOGI(TAG, "Activation done");
+    auto display = Board::GetInstance().GetDisplay();
+
     if (!device_activated_) {
-        auto display = Board::GetInstance().GetDisplay();
         auto lcd = dynamic_cast<LcdDisplay*>(display);
         if (lcd != nullptr) {
             lcd->ShowActivationCode("Kích hoạt thiết bị", device_activation_code_.c_str(),
@@ -365,25 +401,25 @@ void Application::HandleActivationDoneEvent() {
         display->UpdateStatusBar(true);
         return;
     }
+
+    activation_waiting_started_ms_ = 0;
+    last_activation_reconnect_attempt_ms_ = 0;
+    activation_waiting_connection_lost_ = false;
+
     SystemInfo::PrintHeapStats();
+    has_server_time_ = ota_ ? ota_->HasServerTime() : false;
 
-    has_server_time_ = ota_->HasServerTime();
-
-    auto display = Board::GetInstance().GetDisplay();
+    // Important: once the device is already activated, do not show activation success/welcome
+    // again. Just return to the normal runtime path so Idle clock / weather / topbar keep the
+    // original behavior.
     display->SetChatMessage("system", "");
-
     SetDeviceState(kDeviceStateIdle);
     display->UpdateStatusBar(true);
 
-    // Release OTA object after activation is complete
+    // Release OTA object after runtime initialization is complete
     ota_.reset();
     auto& board = Board::GetInstance();
     board.SetPowerSaveLevel(PowerSaveLevel::LOW_POWER);
-
-    Schedule([this]() {
-        // Play the success sound to indicate the device is ready
-        audio_service_.PlaySound(Lang::Sounds::OGG_SUCCESS);
-    });
 }
 
 void Application::ActivationTask() {
@@ -545,6 +581,7 @@ void Application::CheckNewVersion() {
 }
 
 void Application::InitializeProtocol() {
+    ESP_LOGI(TAG, "InitializeProtocol: device_activated=%d", device_activated_);
     auto& board = Board::GetInstance();
     auto display = board.GetDisplay();
     auto codec = board.GetAudioCodec();
@@ -552,11 +589,14 @@ void Application::InitializeProtocol() {
     display->SetStatus(Lang::Strings::LOADING_PROTOCOL);
 
     if (!device_activated_) {
+        ESP_LOGI(TAG, "InitializeProtocol: selecting WebsocketProtocol for activation mode");
         protocol_ = std::make_unique<WebsocketProtocol>();
     } else {
         if (ota_ && ota_->HasMqttConfig()) {
+            ESP_LOGI(TAG, "InitializeProtocol: selecting MqttProtocol");
             protocol_ = std::make_unique<MqttProtocol>();
         } else if (ota_ && ota_->HasWebsocketConfig()) {
+            ESP_LOGI(TAG, "InitializeProtocol: selecting WebsocketProtocol from OTA config");
             protocol_ = std::make_unique<WebsocketProtocol>();
         } else {
             ESP_LOGW(TAG, "No protocol specified in the OTA config, using MQTT");
@@ -593,6 +633,7 @@ void Application::InitializeProtocol() {
             auto display = Board::GetInstance().GetDisplay();
 
             if (!device_activated_) {
+                activation_waiting_connection_lost_ = true;
                 auto lcd = dynamic_cast<LcdDisplay*>(display);
                 if (lcd != nullptr) {
                     lcd->ShowActivationCode("Kích hoạt thiết bị", device_activation_code_.c_str(),
@@ -603,6 +644,11 @@ void Application::InitializeProtocol() {
                 }
                 SetDeviceState(kDeviceStateActivationWaiting);
                 return;
+            }
+
+            if (voice_session_cancelled_by_user_) {
+                ESP_LOGI(TAG, "Voice session cancelled by user, return to idle");
+                voice_session_cancelled_by_user_ = false;
             }
 
             display->SetChatMessage("system", "");
@@ -714,12 +760,21 @@ void Application::InitializeProtocol() {
     });
 
     protocol_->Start();
+    if (!device_activated_) {
+        ESP_LOGI(TAG, "InitializeProtocol: opening websocket audio channel for activation");
+        protocol_->OpenAudioChannel();
+    }
 }
 
 void Application::HandleDeviceActivatedMessage(const cJSON* root) {
     auto device_id = cJSON_GetObjectItem(root, "device_id");
     auto status = cJSON_GetObjectItem(root, "status");
     auto message = cJSON_GetObjectItem(root, "message");
+    ESP_LOGI(TAG, "HandleDeviceActivatedMessage: device_id=%s status=%s",
+             cJSON_IsString(device_id) ? device_id->valuestring : "(null)",
+             cJSON_IsString(status) ? status->valuestring : "(null)");
+    ESP_LOGI(TAG, "HandleDeviceActivatedMessage: local device_activation_code_=%s",
+             device_activation_code_.c_str());
 
     if (!cJSON_IsString(device_id) || !cJSON_IsString(status)) {
         ESP_LOGW(TAG, "Invalid device_activated payload");
@@ -727,7 +782,8 @@ void Application::HandleDeviceActivatedMessage(const cJSON* root) {
     }
 
     if (device_activation_code_ != device_id->valuestring) {
-        ESP_LOGW(TAG, "device_activated ignored, device_id mismatch");
+        ESP_LOGW(TAG, "device_activated ignored, device_id mismatch: local=%s incoming=%s",
+                 device_activation_code_.c_str(), device_id->valuestring);
         return;
     }
 
@@ -752,19 +808,70 @@ void Application::HandleDeviceActivatedMessage(const cJSON* root) {
 
         audio_service_.PlaySound(Lang::Sounds::OGG_SUCCESS);
 
-        SetDeviceState(kDeviceStateActivating);
+        // Show activation success exactly once at activation time.
+        vTaskDelay(pdMS_TO_TICKS(1500));
 
-        if (activation_task_handle_ == nullptr) {
-            xTaskCreate(
-                [](void* arg) {
-                    Application* app = static_cast<Application*>(arg);
-                    app->ActivationTask();
-                    app->activation_task_handle_ = nullptr;
-                    vTaskDelete(NULL);
-                },
-                "activation", 4096 * 2, this, 2, &activation_task_handle_);
-        }
+        activation_waiting_started_ms_ = 0;
+        last_activation_reconnect_attempt_ms_ = 0;
+        activation_waiting_connection_lost_ = false;
+
+        SetDeviceState(kDeviceStateActivating);
+        StartActivationTaskIfNeeded();
     });
+}
+
+void Application::StartActivationTaskIfNeeded() {
+    if (activation_task_handle_ != nullptr) {
+        ESP_LOGW(TAG, "Activation task already running");
+        return;
+    }
+
+    xTaskCreate(
+        [](void* arg) {
+            Application* app = static_cast<Application*>(arg);
+            app->ActivationTask();
+            app->activation_task_handle_ = nullptr;
+            vTaskDelete(NULL);
+        },
+        "activation", 4096 * 2, this, 2, &activation_task_handle_);
+}
+
+void Application::ReconnectActivationProtocolIfNeeded() {
+    if (device_activated_ || GetDeviceState() != kDeviceStateActivationWaiting) {
+        return;
+    }
+
+    const int64_t now_ms = esp_timer_get_time() / 1000;
+    if (last_activation_reconnect_attempt_ms_ != 0 &&
+        (now_ms - last_activation_reconnect_attempt_ms_) < kActivationReconnectIntervalMs) {
+        return;
+    }
+
+    last_activation_reconnect_attempt_ms_ = now_ms;
+    activation_waiting_connection_lost_ = false;
+
+    ESP_LOGI(TAG, "ReconnectActivationProtocolIfNeeded: reopening activation websocket");
+    InitializeProtocol();
+    if (protocol_ != nullptr) {
+        protocol_->OpenAudioChannel();
+    }
+}
+
+void Application::HandleActivationWaitingTick() {
+    const int64_t now_ms = esp_timer_get_time() / 1000;
+
+    if (activation_waiting_started_ms_ == 0) {
+        activation_waiting_started_ms_ = now_ms;
+    }
+
+    const int64_t waiting_ms = now_ms - activation_waiting_started_ms_;
+    if (waiting_ms > 0 && (waiting_ms % kActivationWaitingWarnIntervalMs) < 1000) {
+        ESP_LOGI(TAG, "Activation waiting: %lld seconds elapsed", waiting_ms / 1000);
+    }
+
+    if (activation_waiting_connection_lost_) {
+        ReconnectActivationProtocolIfNeeded();
+    }
 }
 
 void Application::ShowActivationCode(const std::string& code, const std::string& message) {
@@ -818,6 +925,11 @@ void Application::StartListening() { xEventGroupSetBits(event_group_, MAIN_EVENT
 
 void Application::StopListening() { xEventGroupSetBits(event_group_, MAIN_EVENT_STOP_LISTENING); }
 
+void Application::MarkVoiceSessionCancelledByUser(const char* source) {
+    voice_session_cancelled_by_user_ = true;
+    ESP_LOGI(TAG, "Voice session cancelled by user (%s)", source != nullptr ? source : "unknown");
+}
+
 void Application::HandleToggleChatEvent() {
     auto state = GetDeviceState();
 
@@ -849,13 +961,20 @@ void Application::HandleToggleChatEvent() {
         }
         SetListeningMode(mode);
     } else if (state == kDeviceStateSpeaking) {
+        MarkVoiceSessionCancelledByUser("toggle_chat_speaking");
         AbortSpeaking(kAbortReasonNone);
     } else if (state == kDeviceStateListening) {
+        MarkVoiceSessionCancelledByUser("toggle_chat_listening");
         protocol_->CloseAudioChannel();
+    } else if (state == kDeviceStateConnecting) {
+        MarkVoiceSessionCancelledByUser("toggle_chat_connecting");
+        protocol_->CloseAudioChannel();
+        SetDeviceState(kDeviceStateIdle);
     }
 }
 
 void Application::ContinueOpenAudioChannel(ListeningMode mode) {
+    voice_session_cancelled_by_user_ = false;
     // Check state again in case it was changed during scheduling
     if (GetDeviceState() != kDeviceStateConnecting) {
         return;
@@ -909,6 +1028,7 @@ void Application::HandleStopListeningEvent() {
         SetDeviceState(kDeviceStateWifiConfiguring);
         return;
     } else if (state == kDeviceStateListening) {
+        MarkVoiceSessionCancelledByUser("stop_listening");
         if (protocol_) {
             protocol_->SendStopListening();
         }
@@ -962,6 +1082,7 @@ void Application::HandleWakeWordDetectedEvent() {
 }
 
 void Application::ContinueWakeWordInvoke(const std::string& wake_word) {
+    voice_session_cancelled_by_user_ = false;
     // Check state again in case it was changed during scheduling
     if (GetDeviceState() != kDeviceStateConnecting) {
         return;

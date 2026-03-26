@@ -7,6 +7,7 @@
 #include "application.h"
 #include "assets/lang_config.h"
 #include "board.h"
+#include "device_identity.h"
 #include "settings.h"
 #include "system_info.h"
 
@@ -79,7 +80,11 @@ void WebsocketProtocol::CloseAudioChannel(bool send_goodbye) {
 bool WebsocketProtocol::OpenAudioChannel() {
     Settings settings("websocket", false);
     std::string url = settings.GetString("url");
+    if (url.empty()) {
+        url = "wss://admin.minios.tech/ws";
+    }
     std::string token = settings.GetString("token");
+    ESP_LOGI(TAG, "WebsocketProtocol::OpenAudioChannel: websocket.url=%s", url.c_str());
     int version = settings.GetInt("version");
     if (version != 0) {
         version_ = version;
@@ -105,15 +110,14 @@ bool WebsocketProtocol::OpenAudioChannel() {
     Settings device_settings("device", false);
     std::string device_code = device_settings.GetString("device_code", "");
     if (device_code.empty()) {
-        std::string mac = SystemInfo::GetMacAddress();
-        for (auto& c : mac) {
-            if (c >= 'a' && c <= 'z') {
-                c = static_cast<char>(c - 32);
-            }
-        }
-        mac.erase(std::remove(mac.begin(), mac.end(), ':'), mac.end());
-        device_code = mac;
+        device_code = DeviceIdentity::GetNormalizedDeviceId();
+    } else {
+        device_code = DeviceIdentity::NormalizeDeviceId(device_code);
     }
+
+    ESP_LOGI(TAG, "WebsocketProtocol::OpenAudioChannel: Device-Id=%s", device_code.c_str());
+    ESP_LOGI(TAG, "WebsocketProtocol::OpenAudioChannel: Client-Id=%s",
+             Board::GetInstance().GetUuid().c_str());
 
     websocket_->SetHeader("Device-Id", device_code.c_str());
     websocket_->SetHeader("Client-Id", Board::GetInstance().GetUuid().c_str());
@@ -152,6 +156,9 @@ bool WebsocketProtocol::OpenAudioChannel() {
                 }
             }
         } else {
+            ESP_LOGI(TAG, "WebsocketProtocol: received text len=%d data=%.*s", (int)len, (int)len,
+                     data);
+
             // Parse JSON data
             auto root = cJSON_Parse(data);
             if (root == nullptr) {
@@ -176,7 +183,7 @@ bool WebsocketProtocol::OpenAudioChannel() {
     });
 
     websocket_->OnDisconnected([this]() {
-        ESP_LOGI(TAG, "Websocket disconnected");
+        ESP_LOGW(TAG, "WebsocketProtocol: disconnected");
         if (on_audio_channel_closed_ != nullptr) {
             on_audio_channel_closed_();
         }

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include "assets/lang_config.h"
+#include "device_identity.h"
 #include "settings.h"
 #include "system_info.h"
 
@@ -60,13 +61,15 @@ std::unique_ptr<Http> Ota::SetupHttp() {
     auto http = network->CreateHttp(0);
     auto user_agent = SystemInfo::GetUserAgent();
     http->SetHeader("Activation-Version", has_serial_number_ ? "2" : "1");
-    http->SetHeader("Device-Id", SystemInfo::GetMacAddress().c_str());
+    std::string device_id = DeviceIdentity::GetNormalizedDeviceId();
+    http->SetHeader("Device-Id", device_id.c_str());
     http->SetHeader("Client-Id", board.GetUuid());
     if (has_serial_number_) {
         http->SetHeader("Serial-Number", serial_number_.c_str());
         ESP_LOGI(TAG, "Setup HTTP, User-Agent: %s, Serial-Number: %s", user_agent.c_str(),
                  serial_number_.c_str());
     }
+    ESP_LOGI(TAG, "Setup HTTP, Device-Id: %s, Client-Id: %s", device_id.c_str(), board.GetUuid());
     http->SetHeader("User-Agent", user_agent);
     http->SetHeader("Accept-Language", Lang::CODE);
     http->SetHeader("Content-Type", "application/json");
