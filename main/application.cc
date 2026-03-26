@@ -25,6 +25,7 @@
 namespace {
 constexpr int64_t kActivationReconnectIntervalMs = 8000;
 constexpr int64_t kActivationWaitingWarnIntervalMs = 60000;
+constexpr int64_t kMinimumStatusDisplayMs = 1500;
 }  // namespace
 
 Application::Application() {
@@ -63,6 +64,31 @@ Application::~Application() {
 
 bool Application::SetDeviceState(DeviceState state) { return state_machine_.TransitionTo(state); }
 
+void Application::WaitForMinimumStatusDisplayTime() {
+    if (last_status_display_started_ms_ <= 0) {
+        return;
+    }
+
+    const int64_t now_ms = esp_timer_get_time() / 1000;
+    const int64_t elapsed_ms = now_ms - last_status_display_started_ms_;
+    if (elapsed_ms >= kMinimumStatusDisplayMs) {
+        return;
+    }
+
+    const int64_t remaining_ms = kMinimumStatusDisplayMs - elapsed_ms;
+    ESP_LOGI(TAG, "WaitForMinimumStatusDisplayTime: wait %lld ms", remaining_ms);
+    vTaskDelay(pdMS_TO_TICKS(static_cast<uint32_t>(remaining_ms)));
+}
+
+void Application::SetDisplayStatus(const char* status, bool enforce_previous_min) {
+    auto display = Board::GetInstance().GetDisplay();
+    if (enforce_previous_min) {
+        WaitForMinimumStatusDisplayTime();
+    }
+    display->SetStatus(status);
+    last_status_display_started_ms_ = esp_timer_get_time() / 1000;
+}
+
 void Application::Initialize() {
     auto& board = Board::GetInstance();
     SetDeviceState(kDeviceStateStarting);
@@ -71,9 +97,9 @@ void Application::Initialize() {
     display->SetupUI();
 
     // Chỉ giữ màn khởi động đầu tiên
-    display->SetStatus("Khởi động MiniOS");
+    SetDisplayStatus("Khởi động MiniOS", false);
     display->SetChatMessage("system", SystemInfo::GetUserAgent().c_str());
-    vTaskDelay(pdMS_TO_TICKS(800));
+    WaitForMinimumStatusDisplayTime();
 
     // Khởi tạo thật, nhưng không hiện step text thừa
     auto codec = board.GetAudioCodec();
@@ -102,22 +128,20 @@ void Application::Initialize() {
     mcp_server.AddUserOnlyTools();
 
     board.SetNetworkEventCallback([this](NetworkEvent event, const std::string& data) {
-        auto display = Board::GetInstance().GetDisplay();
-
         switch (event) {
             case NetworkEvent::Scanning:
-                display->SetStatus(Lang::Strings::SCANNING_WIFI);
+                SetDisplayStatus(Lang::Strings::SCANNING_WIFI, false);
                 xEventGroupSetBits(event_group_, MAIN_EVENT_NETWORK_DISCONNECTED);
                 break;
 
             case NetworkEvent::Connecting: {
                 if (data.empty()) {
-                    display->SetStatus(Lang::Strings::REGISTERING_NETWORK);
+                    SetDisplayStatus(Lang::Strings::REGISTERING_NETWORK, false);
                 } else {
                     std::string msg = Lang::Strings::CONNECT_TO;
                     msg += data;
                     msg += ".";
-                    display->SetStatus(msg.c_str());
+                    SetDisplayStatus(msg.c_str(), false);
                 }
                 break;
             }
@@ -125,7 +149,7 @@ void Application::Initialize() {
             case NetworkEvent::Connected: {
                 std::string msg = Lang::Strings::CONNECTED_TO;
                 msg += data;
-                display->SetStatus(msg.c_str());
+                SetDisplayStatus(msg.c_str(), false);
                 xEventGroupSetBits(event_group_, MAIN_EVENT_NETWORK_CONNECTED);
                 break;
             }
@@ -137,7 +161,7 @@ void Application::Initialize() {
             case NetworkEvent::WifiConfigModeExit:
                 break;
             case NetworkEvent::ModemDetecting:
-                display->SetStatus(Lang::Strings::DETECTING_MODULE);
+                SetDisplayStatus(Lang::Strings::DETECTING_MODULE, false);
                 break;
             case NetworkEvent::ModemErrorNoSim:
                 Alert(Lang::Strings::ERROR, Lang::Strings::PIN_ERROR, "triangle_exclamation",
@@ -152,7 +176,7 @@ void Application::Initialize() {
                       Lang::Sounds::OGG_EXCLAMATION);
                 break;
             case NetworkEvent::ModemErrorTimeout:
-                display->SetStatus(Lang::Strings::REGISTERING_NETWORK);
+                SetDisplayStatus(Lang::Strings::REGISTERING_NETWORK, false);
                 break;
         }
     });
@@ -256,6 +280,7 @@ void Application::Run() {
 
 void Application::HandleNetworkConnectedEvent() {
     ESP_LOGI(TAG, "Network connected");
+    WaitForMinimumStatusDisplayTime();
     auto state = GetDeviceState();
 
     if (state == kDeviceStateActivationWaiting && !device_activated_) {
@@ -367,7 +392,7 @@ void Application::EnterActivationMode() {
         lcd->ShowActivationCode("Kích hoạt thiết bị", device_activation_code_.c_str(),
                                 device_activation_url_.c_str());
     } else {
-        display->SetStatus("Kích hoạt thiết bị");
+        SetDisplayStatus("Kích hoạt thiết bị");
         display->SetChatMessage("system", device_activation_url_.c_str());
     }
 
@@ -395,7 +420,7 @@ void Application::HandleActivationDoneEvent() {
             lcd->ShowActivationCode("Kích hoạt thiết bị", device_activation_code_.c_str(),
                                     device_activation_url_.c_str());
         } else {
-            display->SetStatus("Đang chờ kích hoạt");
+            SetDisplayStatus("Đang chờ kích hoạt");
             display->SetChatMessage("system", device_activation_url_.c_str());
         }
         display->UpdateStatusBar(true);
@@ -509,9 +534,9 @@ void Application::CheckNewVersion() {
     while (true) {
         auto display = board.GetDisplay();
         display->SetChatMessage("system", "");
-        display->SetStatus(Lang::Strings::CHECKING_NEW_VERSION);
+        SetDisplayStatus(Lang::Strings::CHECKING_NEW_VERSION);
         display->UpdateStatusBar(true);
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        WaitForMinimumStatusDisplayTime();
         esp_err_t err = ota_->CheckVersion();
         if (err != ESP_OK) {
             retry_count++;
@@ -556,7 +581,7 @@ void Application::CheckNewVersion() {
             break;
         }
 
-        display->SetStatus(Lang::Strings::ACTIVATION);
+        SetDisplayStatus(Lang::Strings::ACTIVATION);
         // Activation code is shown to the user and waiting for the user to input
         if (ota_->HasActivationCode()) {
             ShowActivationCode(ota_->GetActivationCode(), ota_->GetActivationMessage());
@@ -586,7 +611,7 @@ void Application::InitializeProtocol() {
     auto display = board.GetDisplay();
     auto codec = board.GetAudioCodec();
 
-    display->SetStatus(Lang::Strings::LOADING_PROTOCOL);
+    SetDisplayStatus(Lang::Strings::LOADING_PROTOCOL);
 
     if (!device_activated_) {
         ESP_LOGI(TAG, "InitializeProtocol: selecting WebsocketProtocol for activation mode");
@@ -639,7 +664,7 @@ void Application::InitializeProtocol() {
                     lcd->ShowActivationCode("Kích hoạt thiết bị", device_activation_code_.c_str(),
                                             device_activation_url_.c_str());
                 } else {
-                    display->SetStatus("Đang chờ kích hoạt");
+                    SetDisplayStatus("Đang chờ kích hoạt");
                     display->SetChatMessage("system", device_activation_url_.c_str());
                 }
                 SetDeviceState(kDeviceStateActivationWaiting);
@@ -767,23 +792,42 @@ void Application::InitializeProtocol() {
 }
 
 void Application::HandleDeviceActivatedMessage(const cJSON* root) {
+    auto activation_code = cJSON_GetObjectItem(root, "activation_code");
+    auto device_code = cJSON_GetObjectItem(root, "device_code");
     auto device_id = cJSON_GetObjectItem(root, "device_id");
     auto status = cJSON_GetObjectItem(root, "status");
     auto message = cJSON_GetObjectItem(root, "message");
-    ESP_LOGI(TAG, "HandleDeviceActivatedMessage: device_id=%s status=%s",
-             cJSON_IsString(device_id) ? device_id->valuestring : "(null)",
-             cJSON_IsString(status) ? status->valuestring : "(null)");
-    ESP_LOGI(TAG, "HandleDeviceActivatedMessage: local device_activation_code_=%s",
-             device_activation_code_.c_str());
 
-    if (!cJSON_IsString(device_id) || !cJSON_IsString(status)) {
+    const char* incoming_raw = nullptr;
+    if (cJSON_IsString(activation_code) && activation_code->valuestring != nullptr) {
+        incoming_raw = activation_code->valuestring;
+    } else if (cJSON_IsString(device_code) && device_code->valuestring != nullptr) {
+        incoming_raw = device_code->valuestring;
+    } else if (cJSON_IsString(device_id) && device_id->valuestring != nullptr) {
+        incoming_raw = device_id->valuestring;
+    }
+
+    std::string incoming_code = incoming_raw != nullptr ? NormalizeDeviceCode(incoming_raw) : "";
+    std::string local_code = NormalizeDeviceCode(device_activation_code_);
+
+    ESP_LOGI(
+        TAG,
+        "HandleDeviceActivatedMessage: activation_code=%s device_code=%s device_id=%s status=%s",
+        cJSON_IsString(activation_code) ? activation_code->valuestring : "(null)",
+        cJSON_IsString(device_code) ? device_code->valuestring : "(null)",
+        cJSON_IsString(device_id) ? device_id->valuestring : "(null)",
+        cJSON_IsString(status) ? status->valuestring : "(null)");
+    ESP_LOGI(TAG, "HandleDeviceActivatedMessage: local_code=%s incoming_code=%s",
+             local_code.c_str(), incoming_code.c_str());
+
+    if (incoming_code.empty() || !cJSON_IsString(status)) {
         ESP_LOGW(TAG, "Invalid device_activated payload");
         return;
     }
 
-    if (device_activation_code_ != device_id->valuestring) {
-        ESP_LOGW(TAG, "device_activated ignored, device_id mismatch: local=%s incoming=%s",
-                 device_activation_code_.c_str(), device_id->valuestring);
+    if (local_code != incoming_code) {
+        ESP_LOGW(TAG, "device_activated ignored, code mismatch: local=%s incoming=%s",
+                 local_code.c_str(), incoming_code.c_str());
         return;
     }
 
@@ -792,6 +836,7 @@ void Application::HandleDeviceActivatedMessage(const cJSON* root) {
         return;
     }
 
+    device_activated_ = true;
     SaveActivationState(true);
 
     Schedule([this, msg = std::string(cJSON_IsString(message) ? message->valuestring
@@ -801,14 +846,13 @@ void Application::HandleDeviceActivatedMessage(const cJSON* root) {
         if (lcd != nullptr) {
             lcd->ShowActivationSuccess(msg.c_str());
         } else {
-            display->SetStatus("Kích hoạt thành công");
+            SetDisplayStatus("Kích hoạt thành công");
             display->SetChatMessage("system", msg.c_str());
         }
         display->UpdateStatusBar(true);
 
         audio_service_.PlaySound(Lang::Sounds::OGG_SUCCESS);
 
-        // Show activation success exactly once at activation time.
         vTaskDelay(pdMS_TO_TICKS(1500));
 
         activation_waiting_started_ms_ = 0;

@@ -149,6 +149,7 @@ private:
     std::string device_activation_code_;
     std::string device_activation_url_;
     bool device_activated_ = false;
+    int64_t last_status_display_started_ms_ = 0;
     bool activation_waiting_connection_lost_ = false;
     bool voice_session_cancelled_by_user_ = false;
     int64_t activation_waiting_started_ms_ = 0;
@@ -163,7 +164,12 @@ private:
     void HandleNetworkConnectedEvent();
     void HandleNetworkDisconnectedEvent();
     void HandleActivationDoneEvent();
+    void WaitForMinimumStatusDisplayTime();
+    void SetDisplayStatus(const char* status, bool enforce_previous_min = true);
     void HandleWakeWordDetectedEvent();
+    bool IsActivationLocked() const;
+    bool CanRunVoiceFeatures() const;
+    void ShowActivationQrScreen();
     void UpdateIdleInfo();
     const char* MapWeatherIconCode(const std::string& icon_code);
     bool RefreshWeatherIfNeeded(bool force = false);
