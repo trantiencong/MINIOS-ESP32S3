@@ -156,6 +156,7 @@ private:
     int64_t last_activation_reconnect_attempt_ms_ = 0;
 
     // Event handlers
+
     void HandleStateChangedEvent();
     void HandleToggleChatEvent();
     void HandleStartListeningEvent();
